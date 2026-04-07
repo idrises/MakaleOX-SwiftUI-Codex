@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Install Dependencies
+        run: |
+          brew install freetds pkg-config
+
+      - name: Build
+        run: |
+          export PKG_CONFIG_PATH="${{ github.workspace }}/ci"
+          echo "pkg-config check: $(pkg-config --cflags --libs freetds)"
+          swift build -v
+
+      - name: Test
+        run: |
+          export PKG_CONFIG_PATH="${{ github.workspace }}/ci"
+          swift test -v
+        env:
+          HOST:     ${{ secrets.DB_HOST }}
+          USERNAME: ${{ secrets.DB_USERNAME }}
+          PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DATABASE: ${{ secrets.DB_DATABASE }}

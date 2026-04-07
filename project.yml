@@ -1,0 +1,46 @@
+name: MakaleSwiftUI
+options:
+  minimumXcodeGenVersion: 2.38.0
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    MACOSX_DEPLOYMENT_TARGET: 13.0
+    SUPPORTS_MACCATALYST: NO
+targets:
+  MakaleSwiftUI:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: MakaleSwiftUI
+        excludes:
+          - SQLClient/libfreetds.a
+          - SQLClient/libfreetds-arm64-repacked.a
+          - SQLClient/libfreetds-prebuilt-x86_64-legacy.a
+          - SQLClient/libfreetds-universal-legacy.a
+    dependencies:
+      - sdk: AVKit.framework
+      - sdk: PDFKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codex.MakaleSwiftUI
+        PRODUCT_NAME: MakaleSwiftUI
+        INFOPLIST_FILE: MakaleSwiftUI/Resources/Info.plist
+        SWIFT_OBJC_BRIDGING_HEADER: MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/MakaleSwiftUI/SQLClient
+        LIBRARY_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/MakaleSwiftUI/SQLClient
+        LD_RUNPATH_SEARCH_PATHS:
+          - $(inherited)
+          - "@executable_path/../Frameworks"
+        OTHER_LDFLAGS:
+          - $(inherited)
+          - $(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-arm64-repacked.a
+          - -liconv
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

@@ -1,0 +1,538 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		007861EF29AF69A005D0369C /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783655A2274AAEB98228996D /* AppModels.swift */; };
+		0F3CB543589909320C36872E /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F09FC29612BA5727D4F31993 /* AVKit.framework */; };
+		1604B8D26A47F85F98AD997C /* ProfileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0884B4DAAA7E60F85D3A8B6A /* ProfileScreen.swift */; };
+		191334C905ECCB268DF29B8D /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B121AF93C4684C5A72013A9 /* SharedComponents.swift */; };
+		1DC237146F5E0081746D24F0 /* MainShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D20BE3C222ED2107886EBCB /* MainShellView.swift */; };
+		248119B171A80408256734BB /* MakaleSwiftUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */; };
+		2805B078A20619B234A1FF38 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */; };
+		301EA72A4ADDF9AD6AD3A47E /* SearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */; };
+		395D84FA3AF0EFF75BF2BAA1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D90B78D1861F0144CEA428E3 /* AppState.swift */; };
+		44237EF3490C6C7CC3B8B20C /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18F9C747F6B2E0C8EA6EAC2 /* SessionStore.swift */; };
+		74923377A7255281D6AE3A93 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0CD71DA73E0A4F89EE1F56 /* HistoryStore.swift */; };
+		74C55F10DA670D37493E80DB /* DashboardScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F23844E11B72C7DE6A53E8 /* DashboardScreen.swift */; };
+		7C62E1759E5BFF9D1B2D6EE2 /* VideosScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5A2BDC5CF1ABF07D58B19C /* VideosScreen.swift */; };
+		7E4CD5D703C5F8712577FAC6 /* SQLGateway.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */; };
+		963A63242CE0D0C64E7613F5 /* LegacyRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D543F3E5A2F2FD3C181DDC9 /* LegacyRepository.swift */; };
+		9C09A8FBD8AF210B7C905F74 /* HistoryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA233BF698152BF3507B7C1C /* HistoryScreen.swift */; };
+		A1C726CF67243B75B6C17DAA /* SQLClient.m in Sources */ = {isa = PBXBuildFile; fileRef = 91748B548B2A2034DABDA121 /* SQLClient.m */; };
+		B1D6F92E69A97FDD43DE69DD /* BooksScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6531A7715AB9E3E25BD542E /* BooksScreen.swift */; };
+		C2B83D695EBA357C61D6C09C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 611636CBAA8D6D46CE10F1E8 /* Assets.xcassets */; };
+		C53CC25A34B9491E400CEF97 /* LegacyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */; };
+		CD6F86E76DAB7AD688A66766 /* JournalsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366A6488F1212CE5289889CB /* JournalsScreen.swift */; };
+		D8078881521C0881E27992A4 /* VideoSetsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1978E3F72F28B56690136879 /* VideoSetsScreen.swift */; };
+		E2F2055E0D859C11E0C54DCA /* ActivationScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B3F333CC282351C743897F /* ActivationScreen.swift */; };
+		EC7802A60A34C3B2381DB4F1 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50D37E05C36A53B741FCED20 /* PDFKit.framework */; };
+		F15B316FDFCE9AF649B99B44 /* AssetLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB633639932E13C782881309 /* AssetLibrary.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MakaleSwiftUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		02F23844E11B72C7DE6A53E8 /* DashboardScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardScreen.swift; sourceTree = "<group>"; };
+		047C767E58959ACBC530802D /* cstypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cstypes.h; sourceTree = "<group>"; };
+		0884B4DAAA7E60F85D3A8B6A /* ProfileScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreen.swift; sourceTree = "<group>"; };
+		0ABB65951F6B1007053323C2 /* odbcss.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = odbcss.h; sourceTree = "<group>"; };
+		0D543F3E5A2F2FD3C181DDC9 /* LegacyRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyRepository.swift; sourceTree = "<group>"; };
+		0FD8C18EE45F32ACC215E842 /* tds_sysdep_public.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tds_sysdep_public.h; sourceTree = "<group>"; };
+		10C7F475EBE90002D80BFEFB /* sqldb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sqldb.h; sourceTree = "<group>"; };
+		1861D155E8333F33592FF157 /* bkpublic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bkpublic.h; sourceTree = "<group>"; };
+		1978E3F72F28B56690136879 /* VideoSetsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSetsScreen.swift; sourceTree = "<group>"; };
+		1A0CD71DA73E0A4F89EE1F56 /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
+		1DC8017C9CAD0CB67EFA05A5 /* sybfront.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sybfront.h; sourceTree = "<group>"; };
+		22AC7F46DD573E52C0E707B0 /* ctpublic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ctpublic.h; sourceTree = "<group>"; };
+		2D20BE3C222ED2107886EBCB /* MainShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainShellView.swift; sourceTree = "<group>"; };
+		32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLGateway.swift; sourceTree = "<group>"; };
+		366A6488F1212CE5289889CB /* JournalsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsScreen.swift; sourceTree = "<group>"; };
+		47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
+		4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakaleSwiftUIApp.swift; sourceTree = "<group>"; };
+		50D37E05C36A53B741FCED20 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
+		538FDA23ECB1C5E2F208C2AE /* sybdb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sybdb.h; sourceTree = "<group>"; };
+		611636CBAA8D6D46CE10F1E8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		69BE318F6FFA1AF8FBE47B34 /* SQLClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SQLClient.h; sourceTree = "<group>"; };
+		6A7F07A25A557444BF1A78F6 /* sqlfront.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sqlfront.h; sourceTree = "<group>"; };
+		6B5A2BDC5CF1ABF07D58B19C /* VideosScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideosScreen.swift; sourceTree = "<group>"; };
+		783655A2274AAEB98228996D /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
+		7B121AF93C4684C5A72013A9 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
+		8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchScreen.swift; sourceTree = "<group>"; };
+		90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyConfig.swift; sourceTree = "<group>"; };
+		91748B548B2A2034DABDA121 /* SQLClient.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SQLClient.m; sourceTree = "<group>"; };
+		983DDD10B3958E670A1A9FE8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AA233BF698152BF3507B7C1C /* HistoryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryScreen.swift; sourceTree = "<group>"; };
+		B126C26409CBACAEC8A82B14 /* cspublic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cspublic.h; sourceTree = "<group>"; };
+		CB633639932E13C782881309 /* AssetLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibrary.swift; sourceTree = "<group>"; };
+		D90B78D1861F0144CEA428E3 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		E6531A7715AB9E3E25BD542E /* BooksScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BooksScreen.swift; sourceTree = "<group>"; };
+		EE844C13F3BED0C1F8F6041F /* MakaleSwiftUI-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MakaleSwiftUI-Bridging-Header.h"; sourceTree = "<group>"; };
+		F09FC29612BA5727D4F31993 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+		F18F9C747F6B2E0C8EA6EAC2 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		F39828E270ABB31A6F17D7EA /* syberror.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = syberror.h; sourceTree = "<group>"; };
+		F9B3F333CC282351C743897F /* ActivationScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationScreen.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		906D2C36005E4C494CDE819C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0F3CB543589909320C36872E /* AVKit.framework in Frameworks */,
+				EC7802A60A34C3B2381DB4F1 /* PDFKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0D4B35F2A1BE420E96FE301D = {
+			isa = PBXGroup;
+			children = (
+				424E745A0C871880342317A6 /* MakaleSwiftUI */,
+				AED7019ABFFB9777FF00547F /* Frameworks */,
+				E9B105EAE7B422BEFE5F57A6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0D852A966D206AC7993FB6F0 /* SQLClient */ = {
+			isa = PBXGroup;
+			children = (
+				1861D155E8333F33592FF157 /* bkpublic.h */,
+				B126C26409CBACAEC8A82B14 /* cspublic.h */,
+				047C767E58959ACBC530802D /* cstypes.h */,
+				22AC7F46DD573E52C0E707B0 /* ctpublic.h */,
+				0ABB65951F6B1007053323C2 /* odbcss.h */,
+				69BE318F6FFA1AF8FBE47B34 /* SQLClient.h */,
+				91748B548B2A2034DABDA121 /* SQLClient.m */,
+				10C7F475EBE90002D80BFEFB /* sqldb.h */,
+				6A7F07A25A557444BF1A78F6 /* sqlfront.h */,
+				538FDA23ECB1C5E2F208C2AE /* sybdb.h */,
+				F39828E270ABB31A6F17D7EA /* syberror.h */,
+				1DC8017C9CAD0CB67EFA05A5 /* sybfront.h */,
+				0FD8C18EE45F32ACC215E842 /* tds_sysdep_public.h */,
+			);
+			path = SQLClient;
+			sourceTree = "<group>";
+		};
+		1E2A40983B98FF3258A08712 /* Stores */ = {
+			isa = PBXGroup;
+			children = (
+				D90B78D1861F0144CEA428E3 /* AppState.swift */,
+				47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */,
+				1A0CD71DA73E0A4F89EE1F56 /* HistoryStore.swift */,
+				F18F9C747F6B2E0C8EA6EAC2 /* SessionStore.swift */,
+			);
+			path = Stores;
+			sourceTree = "<group>";
+		};
+		2289948A295749F3E809BF66 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				EE844C13F3BED0C1F8F6041F /* MakaleSwiftUI-Bridging-Header.h */,
+				4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		424E745A0C871880342317A6 /* MakaleSwiftUI */ = {
+			isa = PBXGroup;
+			children = (
+				2289948A295749F3E809BF66 /* App */,
+				86A8B72FFEE1AB30CF68FFA6 /* Models */,
+				E2B63B531D468BCAAAB54D9B /* Resources */,
+				A406993E5501B8CF659F3625 /* Services */,
+				0D852A966D206AC7993FB6F0 /* SQLClient */,
+				1E2A40983B98FF3258A08712 /* Stores */,
+				5EA1B42DAF066DF6DCDDEC79 /* Views */,
+			);
+			path = MakaleSwiftUI;
+			sourceTree = "<group>";
+		};
+		5EA1B42DAF066DF6DCDDEC79 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				95C509053D2C314267DEB9BF /* Components */,
+				6E155F77557EDB06C2B5C541 /* Screens */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		6E155F77557EDB06C2B5C541 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				F9B3F333CC282351C743897F /* ActivationScreen.swift */,
+				E6531A7715AB9E3E25BD542E /* BooksScreen.swift */,
+				02F23844E11B72C7DE6A53E8 /* DashboardScreen.swift */,
+				AA233BF698152BF3507B7C1C /* HistoryScreen.swift */,
+				366A6488F1212CE5289889CB /* JournalsScreen.swift */,
+				2D20BE3C222ED2107886EBCB /* MainShellView.swift */,
+				0884B4DAAA7E60F85D3A8B6A /* ProfileScreen.swift */,
+				8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */,
+				1978E3F72F28B56690136879 /* VideoSetsScreen.swift */,
+				6B5A2BDC5CF1ABF07D58B19C /* VideosScreen.swift */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		86A8B72FFEE1AB30CF68FFA6 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				783655A2274AAEB98228996D /* AppModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		95C509053D2C314267DEB9BF /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				7B121AF93C4684C5A72013A9 /* SharedComponents.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A406993E5501B8CF659F3625 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				CB633639932E13C782881309 /* AssetLibrary.swift */,
+				90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */,
+				0D543F3E5A2F2FD3C181DDC9 /* LegacyRepository.swift */,
+				32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		AED7019ABFFB9777FF00547F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F09FC29612BA5727D4F31993 /* AVKit.framework */,
+				50D37E05C36A53B741FCED20 /* PDFKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E2B63B531D468BCAAAB54D9B /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				611636CBAA8D6D46CE10F1E8 /* Assets.xcassets */,
+				983DDD10B3958E670A1A9FE8 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		E9B105EAE7B422BEFE5F57A6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		065C4A1E1081A7172FA0C044 /* MakaleSwiftUI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9EC2A0CA028FE3086E067DAB /* Build configuration list for PBXNativeTarget "MakaleSwiftUI" */;
+			buildPhases = (
+				B9CE088FF456A8374B4DE1C5 /* Sources */,
+				E21C6418BEC78B1CC9EB637B /* Resources */,
+				906D2C36005E4C494CDE819C /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MakaleSwiftUI;
+			packageProductDependencies = (
+			);
+			productName = MakaleSwiftUI;
+			productReference = 002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8F6A60706FFD3540DEBA850F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 0119DD703412AAB3A943E8EE /* Build configuration list for PBXProject "MakaleSwiftUI" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 0D4B35F2A1BE420E96FE301D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E9B105EAE7B422BEFE5F57A6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				065C4A1E1081A7172FA0C044 /* MakaleSwiftUI */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E21C6418BEC78B1CC9EB637B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C2B83D695EBA357C61D6C09C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B9CE088FF456A8374B4DE1C5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E2F2055E0D859C11E0C54DCA /* ActivationScreen.swift in Sources */,
+				007861EF29AF69A005D0369C /* AppModels.swift in Sources */,
+				395D84FA3AF0EFF75BF2BAA1 /* AppState.swift in Sources */,
+				F15B316FDFCE9AF649B99B44 /* AssetLibrary.swift in Sources */,
+				B1D6F92E69A97FDD43DE69DD /* BooksScreen.swift in Sources */,
+				74C55F10DA670D37493E80DB /* DashboardScreen.swift in Sources */,
+				2805B078A20619B234A1FF38 /* FavoritesStore.swift in Sources */,
+				9C09A8FBD8AF210B7C905F74 /* HistoryScreen.swift in Sources */,
+				74923377A7255281D6AE3A93 /* HistoryStore.swift in Sources */,
+				CD6F86E76DAB7AD688A66766 /* JournalsScreen.swift in Sources */,
+				C53CC25A34B9491E400CEF97 /* LegacyConfig.swift in Sources */,
+				963A63242CE0D0C64E7613F5 /* LegacyRepository.swift in Sources */,
+				1DC237146F5E0081746D24F0 /* MainShellView.swift in Sources */,
+				248119B171A80408256734BB /* MakaleSwiftUIApp.swift in Sources */,
+				1604B8D26A47F85F98AD997C /* ProfileScreen.swift in Sources */,
+				A1C726CF67243B75B6C17DAA /* SQLClient.m in Sources */,
+				7E4CD5D703C5F8712577FAC6 /* SQLGateway.swift in Sources */,
+				301EA72A4ADDF9AD6AD3A47E /* SearchScreen.swift in Sources */,
+				44237EF3490C6C7CC3B8B20C /* SessionStore.swift in Sources */,
+				191334C905ECCB268DF29B8D /* SharedComponents.swift in Sources */,
+				D8078881521C0881E27992A4 /* VideoSetsScreen.swift in Sources */,
+				7C62E1759E5BFF9D1B2D6EE2 /* VideosScreen.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		032915AEC3406628592FAD66 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		6755CACB76C7060D10DA9755 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
+				);
+				INFOPLIST_FILE = MakaleSwiftUI/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"$(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-arm64-repacked.a",
+					"-liconv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.MakaleSwiftUI;
+				PRODUCT_NAME = MakaleSwiftUI;
+				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
+			};
+			name = Release;
+		};
+		B5EB68065596F8219A738F74 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
+				);
+				INFOPLIST_FILE = MakaleSwiftUI/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"$(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-arm64-repacked.a",
+					"-liconv",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.MakaleSwiftUI;
+				PRODUCT_NAME = MakaleSwiftUI;
+				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
+			};
+			name = Debug;
+		};
+		BE3B18F09A7810748C273F42 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0119DD703412AAB3A943E8EE /* Build configuration list for PBXProject "MakaleSwiftUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				032915AEC3406628592FAD66 /* Debug */,
+				BE3B18F09A7810748C273F42 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9EC2A0CA028FE3086E067DAB /* Build configuration list for PBXNativeTarget "MakaleSwiftUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B5EB68065596F8219A738F74 /* Debug */,
+				6755CACB76C7060D10DA9755 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8F6A60706FFD3540DEBA850F /* Project object */;
+}

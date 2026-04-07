@@ -1,0 +1,619 @@
+import AppKit
+import AVKit
+import CryptoKit
+import PDFKit
+import SwiftUI
+
+enum Palette {
+    static let canvas = Color(red: 0.95, green: 0.94, blue: 0.90)
+    static let surface = Color.white.opacity(0.84)
+    static let surfaceStrong = Color.white.opacity(0.95)
+    static let ink = Color(red: 0.13, green: 0.16, blue: 0.17)
+    static let muted = Color(red: 0.37, green: 0.43, blue: 0.42)
+    static let accent = Color(red: 0.14, green: 0.43, blue: 0.39)
+    static let accentSoft = Color(red: 0.85, green: 0.93, blue: 0.90)
+    static let highlight = Color(red: 0.82, green: 0.41, blue: 0.27)
+    static let gold = Color(red: 0.85, green: 0.66, blue: 0.24)
+    static let danger = Color(red: 0.75, green: 0.28, blue: 0.24)
+}
+
+struct AppCanvas<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Palette.canvas,
+                    Color(red: 0.90, green: 0.93, blue: 0.91),
+                    Color(red: 0.96, green: 0.92, blue: 0.88)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            Circle()
+                .fill(Palette.accentSoft.opacity(0.55))
+                .frame(width: 460, height: 460)
+                .blur(radius: 18)
+                .offset(x: -420, y: -280)
+
+            Circle()
+                .fill(Color.white.opacity(0.55))
+                .frame(width: 320, height: 320)
+                .blur(radius: 24)
+                .offset(x: 430, y: 280)
+
+            content
+        }
+        .foregroundStyle(Palette.ink)
+    }
+}
+
+struct BusyOverlay: View {
+    let title: String
+    let detail: String
+    let progress: Double?
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.12).ignoresSafeArea()
+            VStack(spacing: 16) {
+                if let progress {
+                    VStack(spacing: 10) {
+                        ProgressView(value: progress, total: 1)
+                            .progressViewStyle(.linear)
+                            .tint(Palette.accent)
+                            .frame(width: 220)
+                        Text("\(Int((progress * 100).rounded()))%")
+                            .font(.custom("Avenir Next Demi Bold", size: 14))
+                            .foregroundStyle(Palette.accent)
+                    }
+                } else {
+                    ProgressView()
+                        .controlSize(.large)
+                        .tint(Palette.accent)
+                }
+
+                Text(title.isEmpty ? "Please wait" : title)
+                    .font(.custom("Avenir Next Demi Bold", size: 16))
+                    .foregroundStyle(Palette.ink)
+                if !detail.isEmpty {
+                    Text(detail)
+                        .font(.custom("Avenir Next Regular", size: 13))
+                        .foregroundStyle(Palette.muted)
+                }
+            }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 24)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.12), radius: 24, y: 12)
+        }
+        .transition(.opacity.combined(with: .scale))
+        .animation(.easeInOut(duration: 0.2), value: title)
+        .animation(.easeInOut(duration: 0.2), value: detail)
+        .animation(.easeInOut(duration: 0.2), value: progress ?? -1)
+    }
+}
+
+struct SectionCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(20)
+            .background(Palette.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(0.6), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.07), radius: 18, y: 8)
+    }
+}
+
+struct ScreenHeader: View {
+    let eyebrow: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(eyebrow.uppercased())
+                .font(.custom("Avenir Next Demi Bold", size: 12))
+                .tracking(1.6)
+                .foregroundStyle(Palette.highlight)
+            Text(title)
+                .font(.custom("Avenir Next Bold", size: 34))
+            Text(subtitle)
+                .font(.custom("Avenir Next Regular", size: 15))
+                .foregroundStyle(Palette.muted)
+        }
+    }
+}
+
+struct MetricChip: View {
+    let label: String
+    let value: String
+    let tint: Color
+
+    init(label: String, value: String, tint: Color) {
+        self.label = label
+        self.value = value
+        self.tint = tint
+    }
+
+    init(label: String, value: Int, tint: Color) {
+        self.init(
+            label: label,
+            value: value.formatted(.number.grouping(.automatic)),
+            tint: tint
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.custom("Avenir Next Demi Bold", size: 10))
+                .tracking(0.9)
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+            Text(value)
+                .font(.custom("Avenir Next Bold", size: 20))
+                .lineLimit(1)
+                .minimumScaleFactor(0.62)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(minHeight: 84, alignment: .leading)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+struct FavoriteBadgeButton: View {
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: isSelected ? "star.fill" : "star")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isSelected ? Palette.gold : Palette.muted)
+                .padding(8)
+                .background(Color.white.opacity(0.78), in: Circle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+@MainActor
+private final class ArtworkLoader: ObservableObject {
+    private static let cache = NSCache<NSURL, NSImage>()
+    private static let diskCacheDirectory: URL? = {
+        guard let baseDirectory = try? LegacyConfig.applicationSupportDirectory() else { return nil }
+        let cacheDirectory = baseDirectory.appendingPathComponent("ArtworkCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        return cacheDirectory
+    }()
+
+    @Published private(set) var image: NSImage?
+    @Published private(set) var isLoading = false
+
+    private var currentKey = ""
+    private var loadTask: Task<Void, Never>?
+
+    deinit {
+        loadTask?.cancel()
+    }
+
+    func load(urls: [URL]) {
+        let key = urls.map(\.absoluteString).joined(separator: "|")
+        guard currentKey != key || (image == nil && !isLoading) else { return }
+
+        currentKey = key
+        loadTask?.cancel()
+
+        if let cached = Self.cachedImage(for: urls) {
+            image = cached
+            isLoading = false
+            return
+        }
+
+        image = nil
+        guard !urls.isEmpty else {
+            isLoading = false
+            return
+        }
+
+        isLoading = true
+        loadTask = Task {
+            let loadedImage = await Self.loadFirstAvailableImage(from: urls)
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                guard self.currentKey == key else { return }
+                self.image = loadedImage
+                self.isLoading = false
+            }
+        }
+    }
+
+    static func cachedImage(for urls: [URL]) -> NSImage? {
+        for url in urls {
+            if let cached = cache.object(forKey: url as NSURL) {
+                return cached
+            }
+
+            if let diskCached = diskCachedImage(for: url) {
+                cache.setObject(diskCached, forKey: url as NSURL)
+                return diskCached
+            }
+        }
+
+        return nil
+    }
+
+    private static func loadFirstAvailableImage(from urls: [URL]) async -> NSImage? {
+        for url in urls {
+            if let cached = cache.object(forKey: url as NSURL) {
+                return cached
+            }
+
+            if let diskCached = diskCachedImage(for: url) {
+                cache.setObject(diskCached, forKey: url as NSURL)
+                return diskCached
+            }
+
+            var request = URLRequest(url: url)
+            request.cachePolicy = .returnCacheDataElseLoad
+            request.timeoutInterval = 20
+
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse,
+                      (200...299).contains(httpResponse.statusCode),
+                      let image = NSImage(data: data) else {
+                    continue
+                }
+
+                cache.setObject(image, forKey: url as NSURL)
+                persistImageData(data, for: url)
+                return image
+            } catch {
+                continue
+            }
+        }
+
+        return nil
+    }
+
+    private static func diskCachedImage(for url: URL) -> NSImage? {
+        guard let fileURL = cacheFileURL(for: url),
+              let data = try? Data(contentsOf: fileURL),
+              let image = NSImage(data: data) else {
+            return nil
+        }
+
+        return image
+    }
+
+    private static func persistImageData(_ data: Data, for url: URL) {
+        guard let fileURL = cacheFileURL(for: url) else { return }
+        try? data.write(to: fileURL, options: [.atomic])
+    }
+
+    private static func cacheFileURL(for url: URL) -> URL? {
+        guard let diskCacheDirectory else { return nil }
+        let digest = SHA256.hash(data: Data(url.absoluteString.utf8))
+        let fileName = digest.map { String(format: "%02x", $0) }.joined()
+        return diskCacheDirectory.appendingPathComponent(fileName).appendingPathExtension("img")
+    }
+}
+
+struct RemoteArtworkView: View {
+    let urls: [URL]
+    var aspectRatio: CGFloat = 0.72
+    var cornerRadius: CGFloat = 22
+
+    @StateObject private var loader = ArtworkLoader()
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Palette.accentSoft, Color.white],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            if let image = loader.image ?? ArtworkLoader.cachedImage(for: urls) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else if loader.isLoading {
+                ProgressView().tint(Palette.accent)
+            } else {
+                placeholderView
+            }
+        }
+        .aspectRatio(aspectRatio, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .task(id: urls.map(\.absoluteString).joined(separator: "|")) {
+            loader.load(urls: urls)
+        }
+    }
+
+    private var placeholderView: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "sparkles.rectangle.stack.fill")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(Palette.accent.opacity(0.8))
+            Text("Makale")
+                .font(.custom("Avenir Next Demi Bold", size: 14))
+                .foregroundStyle(Palette.muted)
+        }
+    }
+}
+
+struct MediaCard<Content: View>: View {
+    let artworkURLs: [URL]
+    let favoriteSelected: Bool?
+    let favoriteAction: (() -> Void)?
+    let artworkAspectRatio: CGFloat
+    let contentSpacing: CGFloat
+    let cardPadding: CGFloat
+    let content: Content
+
+    init(
+        artworkURLs: [URL],
+        favoriteSelected: Bool? = nil,
+        favoriteAction: (() -> Void)? = nil,
+        artworkAspectRatio: CGFloat = 0.8,
+        contentSpacing: CGFloat = 10,
+        cardPadding: CGFloat = 14,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.artworkURLs = artworkURLs
+        self.favoriteSelected = favoriteSelected
+        self.favoriteAction = favoriteAction
+        self.artworkAspectRatio = artworkAspectRatio
+        self.contentSpacing = contentSpacing
+        self.cardPadding = cardPadding
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: contentSpacing) {
+            ZStack(alignment: .topTrailing) {
+                RemoteArtworkView(urls: artworkURLs, aspectRatio: artworkAspectRatio, cornerRadius: 20)
+                if let favoriteSelected, let favoriteAction {
+                    FavoriteBadgeButton(isSelected: favoriteSelected, action: favoriteAction)
+                        .padding(10)
+                }
+            }
+
+            content
+        }
+        .padding(cardPadding)
+        .background(Palette.surfaceStrong, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 12, y: 6)
+    }
+}
+
+struct CompactMediaRowCard<Details: View, Footer: View>: View {
+    let artworkURLs: [URL]
+    let title: String
+    let favoriteSelected: Bool?
+    let favoriteAction: (() -> Void)?
+    let artworkAspectRatio: CGFloat
+    let artworkWidth: CGFloat
+    let artworkHeight: CGFloat
+    let cornerRadius: CGFloat
+    let cardPadding: CGFloat
+    let titleSize: CGFloat
+    let titleLineLimit: Int
+    let contentSpacing: CGFloat
+    let details: Details
+    let footer: Footer
+
+    init(
+        artworkURLs: [URL],
+        title: String,
+        favoriteSelected: Bool? = nil,
+        favoriteAction: (() -> Void)? = nil,
+        artworkAspectRatio: CGFloat = 0.78,
+        artworkWidth: CGFloat = 84,
+        artworkHeight: CGFloat = 108,
+        cornerRadius: CGFloat = 11,
+        cardPadding: CGFloat = 9,
+        titleSize: CGFloat = 12,
+        titleLineLimit: Int = 2,
+        contentSpacing: CGFloat = 4,
+        @ViewBuilder details: () -> Details,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.artworkURLs = artworkURLs
+        self.title = title
+        self.favoriteSelected = favoriteSelected
+        self.favoriteAction = favoriteAction
+        self.artworkAspectRatio = artworkAspectRatio
+        self.artworkWidth = artworkWidth
+        self.artworkHeight = artworkHeight
+        self.cornerRadius = cornerRadius
+        self.cardPadding = cardPadding
+        self.titleSize = titleSize
+        self.titleLineLimit = titleLineLimit
+        self.contentSpacing = contentSpacing
+        self.details = details()
+        self.footer = footer()
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            RemoteArtworkView(
+                urls: artworkURLs,
+                aspectRatio: artworkAspectRatio,
+                cornerRadius: cornerRadius
+            )
+            .frame(width: artworkWidth, height: artworkHeight)
+            .clipped()
+
+            VStack(alignment: .leading, spacing: contentSpacing) {
+                HStack(alignment: .top, spacing: 7) {
+                    Text(title)
+                        .font(.custom("Avenir Next Demi Bold", size: titleSize))
+                        .lineLimit(titleLineLimit)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+
+                    if let favoriteSelected, let favoriteAction {
+                        Spacer(minLength: 6)
+
+                        FavoriteBadgeButton(
+                            isSelected: favoriteSelected,
+                            action: favoriteAction
+                        )
+                        .frame(width: 30, height: 30, alignment: .topTrailing)
+                    }
+                }
+
+                details
+
+                Spacer(minLength: 3)
+
+                footer
+            }
+            .frame(maxWidth: .infinity, minHeight: artworkHeight, alignment: .topLeading)
+        }
+        .padding(cardPadding)
+        .frame(maxWidth: .infinity, minHeight: artworkHeight + (cardPadding * 2) + 2, alignment: .topLeading)
+        .background(Palette.surfaceStrong, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: .black.opacity(0.035), radius: 7, y: 3)
+    }
+}
+
+struct EmptyStateView: View {
+    let title: String
+    let message: String
+    let symbolName: String
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: symbolName)
+                .font(.system(size: 26, weight: .medium))
+                .foregroundStyle(Palette.accent)
+            Text(title)
+                .font(.custom("Avenir Next Demi Bold", size: 20))
+            Text(message)
+                .font(.custom("Avenir Next Regular", size: 14))
+                .foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 360)
+        }
+        .padding(36)
+        .frame(maxWidth: .infinity, minHeight: 260)
+        .background(Palette.surface.opacity(0.9), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+}
+
+struct StatusPill: View {
+    let text: String
+    let tint: Color
+
+    var body: some View {
+        Text(text)
+            .font(.custom("Avenir Next Demi Bold", size: 12))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(tint.opacity(0.1), in: Capsule())
+    }
+}
+
+struct DocumentViewerScreen: View {
+    let document: DocumentPresentation
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(document.title)
+                        .font(.custom("Avenir Next Demi Bold", size: 18))
+                    Text(document.url.lastPathComponent)
+                        .font(.custom("Avenir Next Regular", size: 12))
+                        .foregroundStyle(Palette.muted)
+                }
+                Spacer()
+                Button("Export") { exportPDF() }
+                Button("Close") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(18)
+            .background(Palette.surfaceStrong)
+
+            PDFContainerView(url: document.url)
+        }
+        .frame(minWidth: 960, minHeight: 720)
+    }
+
+    private func exportPDF() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = document.url.lastPathComponent
+        if panel.runModal() == .OK, let destination = panel.url {
+            try? FileManager.default.copyItem(at: document.url, to: destination)
+        }
+    }
+}
+
+struct VideoPlayerScreen: View {
+    let video: VideoPresentation
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(video.title)
+                    .font(.custom("Avenir Next Demi Bold", size: 18))
+                Spacer()
+                Button("Close") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(18)
+            .background(Palette.surfaceStrong)
+
+            VideoPlayer(player: AVPlayer(url: video.url))
+                .background(Color.black)
+        }
+        .frame(minWidth: 960, minHeight: 620)
+    }
+}
+
+struct PDFContainerView: NSViewRepresentable {
+    let url: URL
+
+    func makeNSView(context: Context) -> PDFView {
+        let view = PDFView()
+        view.autoScales = true
+        view.displayMode = .singlePageContinuous
+        view.displayDirection = .vertical
+        view.backgroundColor = .white
+        return view
+    }
+
+    func updateNSView(_ nsView: PDFView, context: Context) {
+        nsView.document = PDFDocument(url: url)
+    }
+}
