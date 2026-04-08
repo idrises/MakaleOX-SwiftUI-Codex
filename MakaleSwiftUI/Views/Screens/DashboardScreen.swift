@@ -52,48 +52,52 @@ struct DashboardScreen: View {
                                 symbolName: "clock.arrow.circlepath"
                             )
                         } else {
-                            LazyVGrid(columns: compactDashboardColumns, spacing: 10) {
-                                ForEach(activityEntries) { entry in
-                                    Button {
-                                        let visibleEntries = activityEntries
-                                        Task { await appState.reopenHistoryEntry(entry, historyContext: visibleEntries) }
-                                    } label: {
-                                        CompactMediaRowCard(
-                                            artworkURLs: coverURLs(for: entry),
-                                            title: entry.title,
-                                            playbackRecord: playbackRecord(for: entry),
-                                            artworkAspectRatio: 1,
-                                            artworkWidth: 84,
-                                            artworkHeight: 84,
-                                            cornerRadius: 16,
-                                            cardPadding: 10,
-                                            titleSize: 15,
-                                            titleLineLimit: 2,
-                                            contentSpacing: 5
-                                        ) {
-                                            Text(entry.subtitle)
-                                                .font(.custom("Avenir Next Regular", size: 12))
-                                                .foregroundStyle(Palette.muted)
-                                                .lineLimit(1)
-
-                                            Text(entry.detail)
-                                                .font(.custom("Avenir Next Medium", size: 11))
-                                                .foregroundStyle(Palette.highlight)
-                                                .lineLimit(2)
-                                        } footer: {
-                                            HStack(spacing: 10) {
-                                                StatusPill(text: entry.kind.title, tint: Palette.accent)
-                                                Spacer()
-                                                Text(LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date()))
-                                                    .font(.custom("Avenir Next Regular", size: 11))
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHGrid(rows: activityGridRows, alignment: .top, spacing: 10) {
+                                    ForEach(activityEntries) { entry in
+                                        Button {
+                                            let visibleEntries = activityEntries
+                                            Task { await appState.reopenHistoryEntry(entry, historyContext: visibleEntries) }
+                                        } label: {
+                                            CompactMediaRowCard(
+                                                artworkURLs: coverURLs(for: entry),
+                                                title: entry.title,
+                                                playbackRecord: playbackRecord(for: entry),
+                                                artworkAspectRatio: 1,
+                                                artworkWidth: 84,
+                                                artworkHeight: 84,
+                                                cornerRadius: 16,
+                                                cardPadding: 10,
+                                                titleSize: 15,
+                                                titleLineLimit: 2,
+                                                contentSpacing: 5
+                                            ) {
+                                                Text(entry.subtitle)
+                                                    .font(.custom("Avenir Next Regular", size: 12))
                                                     .foregroundStyle(Palette.muted)
                                                     .lineLimit(1)
+
+                                                Text(entry.detail)
+                                                    .font(.custom("Avenir Next Medium", size: 11))
+                                                    .foregroundStyle(Palette.highlight)
+                                                    .lineLimit(2)
+                                            } footer: {
+                                                HStack(spacing: 10) {
+                                                    StatusPill(text: entry.kind.title, tint: Palette.accent)
+                                                    Spacer()
+                                                    Text(LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date()))
+                                                        .font(.custom("Avenir Next Regular", size: 11))
+                                                        .foregroundStyle(Palette.muted)
+                                                        .lineLimit(1)
+                                                }
                                             }
+                                            .frame(width: activityCardWidth, alignment: .leading)
                                         }
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
                                 }
                             }
+                            .frame(height: activityGridHeight)
                         }
                     }
                 }
@@ -275,6 +279,26 @@ struct DashboardScreen: View {
 
     private var compactDashboardColumns: [GridItem] {
         [GridItem(.adaptive(minimum: dashboardCardMinimumWidth, maximum: dashboardCardMaximumWidth), spacing: 10, alignment: .top)]
+    }
+
+    private var activityGridRows: [GridItem] {
+        Array(repeating: GridItem(.fixed(activityRowHeight), spacing: 10, alignment: .top), count: 3)
+    }
+
+    private var activityRowHeight: CGFloat {
+        122
+    }
+
+    private var activityGridHeight: CGFloat {
+        (activityRowHeight * 3) + 20
+    }
+
+    private var activityCardWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 312 : 260
+#else
+        312
+#endif
     }
 
     private var dashboardHeaderTitle: String {
