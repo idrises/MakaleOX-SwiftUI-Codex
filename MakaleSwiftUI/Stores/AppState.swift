@@ -803,7 +803,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    func reopenHistoryEntry(_ entry: HistoryEntry) async {
+    func reopenHistoryEntry(_ entry: HistoryEntry, historyContext: [HistoryEntry]? = nil) async {
         switch entry.kind {
         case .article, .chapter:
             if FileManager.default.fileExists(atPath: entry.urlString) {
@@ -852,12 +852,21 @@ final class AppState: ObservableObject {
         case .video, .videoSet:
             if let url = URL(string: entry.urlString), !entry.urlString.isEmpty {
                 activeDocument = nil
-                activeVideo = await makeHistoryVideoPresentation(
-                    for: entry,
-                    reference: entry.reference,
-                    url: url,
-                    session: session
-                )
+                if let historyContext, !historyContext.isEmpty {
+                    activeVideo = makeHistoryContextVideoPresentation(
+                        for: entry,
+                        reference: entry.reference,
+                        url: url,
+                        historyContext: historyContext
+                    )
+                } else {
+                    activeVideo = await makeHistoryVideoPresentation(
+                        for: entry,
+                        reference: entry.reference,
+                        url: url,
+                        session: session
+                    )
+                }
                 return
             }
 
@@ -880,12 +889,21 @@ final class AppState: ObservableObject {
 
                 self.historyStore.update(entry.updating(urlString: url.absoluteString, reference: reference))
                 self.activeDocument = nil
-                self.activeVideo = await self.makeHistoryVideoPresentation(
-                    for: entry,
-                    reference: reference,
-                    url: url,
-                    session: self.session
-                )
+                if let historyContext, !historyContext.isEmpty {
+                    self.activeVideo = self.makeHistoryContextVideoPresentation(
+                        for: entry,
+                        reference: reference,
+                        url: url,
+                        historyContext: historyContext
+                    )
+                } else {
+                    self.activeVideo = await self.makeHistoryVideoPresentation(
+                        for: entry,
+                        reference: reference,
+                        url: url,
+                        session: self.session
+                    )
+                }
             }
         }
     }
@@ -981,6 +999,31 @@ final class AppState: ObservableObject {
         }
     }
 
+    private func makeHistoryContextVideoPresentation(
+        for entry: HistoryEntry,
+        reference: HistoryReference?,
+        url: URL,
+        historyContext: [HistoryEntry]
+    ) -> VideoPresentation {
+        let currentItem = makeVideoRailItem(for: entry, reference: reference, url: url)
+        let railItems = historyContext.compactMap { contextEntry -> VideoRailItem? in
+            guard contextEntry.kind == .video || contextEntry.kind == .videoSet else { return nil }
+            guard let resolved = resolvedHistoryVideoPayload(for: contextEntry) else { return nil }
+            return makeVideoRailItem(
+                for: contextEntry,
+                reference: resolved.reference,
+                url: resolved.url
+            )
+        }
+
+        return makeVideoPresentation(
+            currentItem: currentItem,
+            railItems: railItems,
+            railTitle: "Recently opened videos",
+            railSubtitle: "History"
+        )
+    }
+
     private func makeVideoPresentation(
         currentItem: VideoRailItem,
         railItems: [VideoRailItem],
@@ -1072,6 +1115,34 @@ final class AppState: ObservableObject {
             sourceName: sourceName,
             sourceDetail: entry.detail
         )
+    }
+
+    private func resolvedHistoryVideoPayload(
+        for entry: HistoryEntry
+    ) -> (url: URL, reference: HistoryReference?)? {
+        if let directURL = URL(string: entry.urlString), !entry.urlString.isEmpty {
+            return (directURL, entry.reference)
+        }
+
+        guard let reference = entry.reference else { return nil }
+        let resolvedURL: URL?
+        switch reference.kind {
+        case .video:
+            resolvedURL = LegacyConfig.videoRemoteURL(
+                bookJournal: reference.primary,
+                link: reference.secondary
+            )
+        case .videoSet:
+            resolvedURL = LegacyConfig.videoSetRemoteURL(
+                setName: reference.primary,
+                link: reference.secondary
+            )
+        case .article, .chapter:
+            resolvedURL = nil
+        }
+
+        guard let resolvedURL else { return nil }
+        return (resolvedURL, reference)
     }
 
     private func resolveRelatedVideos(for video: Video, session: SessionInfo) async -> [Video] {

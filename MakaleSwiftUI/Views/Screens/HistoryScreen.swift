@@ -110,7 +110,8 @@ struct HistoryScreen: View {
                     LazyVStack(spacing: 14) {
                         ForEach(filteredEntries) { entry in
                             Button {
-                                Task { await appState.reopenHistoryEntry(entry) }
+                                let visibleEntries = filteredEntries
+                                Task { await appState.reopenHistoryEntry(entry, historyContext: visibleEntries) }
                             } label: {
                                 CompactMediaRowCard(
                                     artworkURLs: coverURLs(for: entry),

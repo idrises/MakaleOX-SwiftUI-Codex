@@ -2076,7 +2076,8 @@ private struct PhoneHistoryExperienceScreen: View {
                 LazyVStack(spacing: 12) {
                     ForEach(filteredEntries) { entry in
                         Button {
-                            Task { await appState.reopenHistoryEntry(entry) }
+                            let visibleEntries = filteredEntries
+                            Task { await appState.reopenHistoryEntry(entry, historyContext: visibleEntries) }
                         } label: {
                             PhoneRowCard(
                                 artworkURLs: coverURLs(for: entry),
@@ -2387,7 +2388,8 @@ private struct PhoneProfileExperienceScreen: View {
             LazyVStack(spacing: 12) {
                 ForEach(entries) { entry in
                     Button {
-                        Task { await appState.reopenHistoryEntry(entry) }
+                        let visibleEntries = entries
+                        Task { await appState.reopenHistoryEntry(entry, historyContext: visibleEntries) }
                     } label: {
                         PhoneRowCard(
                             artworkURLs: coverURLs(for: entry),
