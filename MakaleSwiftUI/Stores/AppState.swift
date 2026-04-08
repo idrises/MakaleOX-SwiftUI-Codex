@@ -622,6 +622,18 @@ final class AppState: ObservableObject {
         guard let session else { return }
         guard validateSession(session) else { return }
         var resolvedURL: URL?
+        let historyEntry = HistoryEntry(
+            kind: .article,
+            title: article.title,
+            subtitle: article.journalName,
+            detail: article.issueTitle,
+            urlString: "",
+            coverURLString: LegacyConfig.issueCoverCandidates(
+                journal: article.journalName,
+                issue: article.issueTitle
+            ).first?.absoluteString ?? "",
+            reference: .article(journal: article.journalName, folder: article.folder, pdfLink: article.pdfLink)
+        )
 
         await perform("Opening article") { [self] in
             let url = try await self.assetLibrary.articleURL(for: article) { progress in
@@ -629,27 +641,16 @@ final class AppState: ObservableObject {
                 self.loadingDetail = progress.detailText
                 self.loadingProgress = progress.fractionCompleted
             }
-            await self.repository.recordArticleOpen(article, email: session.email)
-            self.historyStore.add(
-                HistoryEntry(
-                    kind: .article,
-                    title: article.title,
-                    subtitle: article.journalName,
-                    detail: article.issueTitle,
-                    urlString: url.path,
-                    coverURLString: LegacyConfig.issueCoverCandidates(
-                        journal: article.journalName,
-                        issue: article.issueTitle
-                    ).first?.absoluteString ?? "",
-                    reference: .article(journal: article.journalName, folder: article.folder, pdfLink: article.pdfLink)
-                )
-            )
+            self.historyStore.add(historyEntry.updating(urlString: url.path))
             resolvedURL = url
         }
 
         if let resolvedURL {
             activeVideo = nil
             activeDocument = DocumentPresentation(title: article.title, url: resolvedURL)
+            recordOpenEvent {
+                await self.repository.recordArticleOpen(article, email: session.email)
+            }
         }
     }
 
@@ -657,6 +658,15 @@ final class AppState: ObservableObject {
         guard let session else { return }
         guard validateSession(session) else { return }
         var resolvedURL: URL?
+        let historyEntry = HistoryEntry(
+            kind: .chapter,
+            title: chapter.title,
+            subtitle: chapter.bookTitle,
+            detail: chapter.editors,
+            urlString: "",
+            coverURLString: LegacyConfig.bookCoverCandidates(isbn: chapter.isbn).first?.absoluteString ?? "",
+            reference: .chapter(isbn: chapter.isbn, pdfLink: chapter.pdfLink)
+        )
 
         await perform("Opening chapter") { [self] in
             let url = try await self.assetLibrary.chapterURL(for: chapter) { progress in
@@ -664,24 +674,16 @@ final class AppState: ObservableObject {
                 self.loadingDetail = progress.detailText
                 self.loadingProgress = progress.fractionCompleted
             }
-            await self.repository.recordChapterOpen(chapter, email: session.email)
-            self.historyStore.add(
-                HistoryEntry(
-                    kind: .chapter,
-                    title: chapter.title,
-                    subtitle: chapter.bookTitle,
-                    detail: chapter.editors,
-                    urlString: url.path,
-                    coverURLString: LegacyConfig.bookCoverCandidates(isbn: chapter.isbn).first?.absoluteString ?? "",
-                    reference: .chapter(isbn: chapter.isbn, pdfLink: chapter.pdfLink)
-                )
-            )
+            self.historyStore.add(historyEntry.updating(urlString: url.path))
             resolvedURL = url
         }
 
         if let resolvedURL {
             activeVideo = nil
             activeDocument = DocumentPresentation(title: chapter.title, url: resolvedURL)
+            recordOpenEvent {
+                await self.repository.recordChapterOpen(chapter, email: session.email)
+            }
         }
     }
 
@@ -702,7 +704,6 @@ final class AppState: ObservableObject {
         }
         let playbackURL = videoDownloadManager.playbackURL(for: remoteURL)
 
-        await repository.recordVideoOpen(video, email: session.email)
         historyStore.add(
             HistoryEntry(
                 kind: .video,
@@ -715,6 +716,9 @@ final class AppState: ObservableObject {
             )
         )
         activeDocument = nil
+        recordOpenEvent {
+            await self.repository.recordVideoOpen(video, email: session.email)
+        }
         switch railContext {
         case .source:
             let relatedVideos = await resolveRelatedVideos(for: video, session: session)
@@ -781,7 +785,6 @@ final class AppState: ObservableObject {
         }
         let playbackURL = videoDownloadManager.playbackURL(for: remoteURL)
 
-        await repository.recordVideoSetOpen(setName: set.setName, entry: entry, email: session.email)
         historyStore.add(
             HistoryEntry(
                 kind: .videoSet,
@@ -794,6 +797,9 @@ final class AppState: ObservableObject {
             )
         )
         activeDocument = nil
+        recordOpenEvent {
+            await self.repository.recordVideoSetOpen(setName: set.setName, entry: entry, email: session.email)
+        }
         switch railContext {
         case .source:
             let relatedEntries = await resolveRelatedVideoSetEntries(for: entry)
@@ -1477,5 +1483,11 @@ final class AppState: ObservableObject {
         self.loadingDetail = ""
         self.loadingProgress = nil
         isBusy = false
+    }
+
+    private func recordOpenEvent(_ operation: @escaping @MainActor () async -> Void) {
+        Task(priority: .utility) {
+            await operation()
+        }
     }
 }
