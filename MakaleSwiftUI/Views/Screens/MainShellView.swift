@@ -48,9 +48,7 @@ struct MainShellView: View {
 
                     #if os(iOS)
                     if let session = appState.session, isRegularIPadLayout {
-                        SectionCard {
-                            sidebarFooterCard(session)
-                        }
+                        sidebarFooterCard(session)
                     }
                     #endif
                 }
@@ -506,16 +504,6 @@ extension MainShellView {
         HStack(alignment: .center, spacing: 12) {
             SidebarAvatarPicker(session: session)
                 .environmentObject(profileAvatarStore)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Profile photo")
-                    .font(.custom("Avenir Next Demi Bold", size: 12))
-                    .foregroundStyle(Palette.ink)
-
-                Text("Tap to change")
-                    .font(.custom("Avenir Next Medium", size: 11))
-                    .foregroundStyle(Palette.muted)
-            }
 
             Spacer(minLength: 0)
 
