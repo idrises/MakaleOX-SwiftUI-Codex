@@ -1,26 +1,16 @@
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 struct DashboardScreen: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
     @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     #if os(iOS)
-    @EnvironmentObject private var profileAvatarStore: ProfileAvatarStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                #if os(iOS)
-                if usesRefreshedIOSDashboard, let session = appState.session {
-                    dashboardWelcomeCard(session)
-                }
-                #endif
-
                 ScreenHeader(
                     eyebrow: "Overview",
                     title: dashboardHeaderTitle,
@@ -596,184 +586,7 @@ struct DashboardScreen: View {
         }
     }
 
-    #if os(iOS)
-    @ViewBuilder
-    private func dashboardWelcomeCard(_ session: SessionInfo) -> some View {
-        SectionCard {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Welcome")
-                            .font(.custom("Avenir Next Demi Bold", size: 11))
-                            .foregroundStyle(Palette.highlight)
-
-                        Text(AppBranding.title)
-                            .font(.custom("Avenir Next Bold", size: 30))
-                            .foregroundStyle(Palette.ink)
-
-                        Text(session.displayName)
-                            .font(.custom("Avenir Next Medium", size: 15))
-                            .foregroundStyle(Palette.muted)
-                            .lineLimit(2)
-                    }
-
-                    Spacer(minLength: 0)
-
-                    DashboardAvatarPicker(session: session)
-                        .environmentObject(profileAvatarStore)
-                }
-
-                HStack(alignment: .bottom, spacing: 12) {
-                    Text(session.expireDate.isEmpty ? "Renew date -" : "Renew date \(session.expireDate)")
-                        .font(.custom("Avenir Next Medium", size: 12))
-                        .foregroundStyle(Palette.muted)
-
-                    Spacer(minLength: 0)
-
-                    Text(session.isExpired ? "Expired" : "Active")
-                        .font(.custom("Avenir Next Demi Bold", size: 11))
-                        .foregroundStyle(session.isExpired ? Palette.danger : Palette.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background((session.isExpired ? Palette.danger : Palette.accent).opacity(0.10), in: Capsule())
-                }
-            }
-        }
-    }
-    #endif
 }
-
-#if os(iOS)
-private struct DashboardAvatarPicker: View {
-    @EnvironmentObject private var profileAvatarStore: ProfileAvatarStore
-    @State private var isShowingOptions = false
-    @State private var activeImageSource: DashboardAvatarImageSource?
-
-    let session: SessionInfo
-
-    var body: some View {
-        Button {
-            isShowingOptions = true
-        } label: {
-            avatarImage
-                .frame(width: 68, height: 68)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.9), lineWidth: 2)
-                )
-                .shadow(color: .black.opacity(0.12), radius: 12, y: 5)
-        }
-        .buttonStyle(.plain)
-        .confirmationDialog("Profile photo", isPresented: $isShowingOptions, titleVisibility: .visible) {
-            Button("Fotoğraf seç") {
-                activeImageSource = .photoLibrary
-            }
-            if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                Button("Fotoğraf çek") {
-                    activeImageSource = .camera
-                }
-            }
-            if profileAvatarStore.imageData(for: session) != nil {
-                Button("Kaldır", role: .destructive) {
-                    profileAvatarStore.removeAvatar(for: session)
-                }
-            }
-            Button("Vazgeç", role: .cancel) {}
-        }
-        .sheet(item: $activeImageSource) { source in
-            DashboardAvatarImagePicker(sourceType: source.sourceType) { data in
-                if let data {
-                    profileAvatarStore.saveAvatarData(data, for: session)
-                }
-                activeImageSource = nil
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var avatarImage: some View {
-        if let data = profileAvatarStore.imageData(for: session),
-           let image = UIImage(data: data) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-        } else {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Palette.accentSoft, Color.white],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 34, weight: .medium))
-                    .foregroundStyle(Palette.accent)
-            }
-        }
-    }
-}
-
-private enum DashboardAvatarImageSource: String, Identifiable {
-    case photoLibrary
-    case camera
-
-    var id: String { rawValue }
-
-    var sourceType: UIImagePickerController.SourceType {
-        switch self {
-        case .photoLibrary:
-            return .photoLibrary
-        case .camera:
-            return .camera
-        }
-    }
-}
-
-private struct DashboardAvatarImagePicker: UIViewControllerRepresentable {
-    let sourceType: UIImagePickerController.SourceType
-    let onSelection: (Data?) -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onSelection: onSelection)
-    }
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let controller = UIImagePickerController()
-        controller.sourceType = sourceType
-        controller.allowsEditing = true
-        controller.delegate = context.coordinator
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
-    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let onSelection: (Data?) -> Void
-
-        init(onSelection: @escaping (Data?) -> Void) {
-            self.onSelection = onSelection
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
-            onSelection(nil)
-        }
-
-        func imagePickerController(
-            _ picker: UIImagePickerController,
-            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
-        ) {
-            let image = (info[.editedImage] ?? info[.originalImage]) as? UIImage
-            let data = image?.jpegData(compressionQuality: 0.88) ?? image?.pngData()
-            picker.dismiss(animated: true)
-            onSelection(data)
-        }
-    }
-}
-#endif
 
 private struct DashboardDownloadStateSummary: View {
     let state: VideoDownloadState

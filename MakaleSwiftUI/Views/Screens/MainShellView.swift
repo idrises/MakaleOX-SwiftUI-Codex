@@ -2,6 +2,9 @@ import SwiftUI
 #if os(macOS)
 import AppKit
 #endif
+#if os(iOS)
+import UIKit
+#endif
 
 struct MainShellView: View {
     @EnvironmentObject private var appState: AppState
@@ -9,6 +12,7 @@ struct MainShellView: View {
     @Environment(\.openWindow) private var openWindow
     #endif
     #if os(iOS)
+    @EnvironmentObject private var profileAvatarStore: ProfileAvatarStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var splitViewVisibility: NavigationSplitViewVisibility = .all
     #endif
@@ -31,19 +35,7 @@ struct MainShellView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if let session = appState.session {
                         SectionCard {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text(AppBranding.title)
-                                    .font(.custom("Avenir Next Demi Bold", size: 15))
-                                    .foregroundStyle(Palette.highlight)
-                                Text(session.displayName)
-                                    .font(.custom("Avenir Next Demi Bold", size: 20))
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                StatusPill(
-                                    text: session.isExpired ? "Expired" : "Active until \(session.expireDate)",
-                                    tint: session.isExpired ? Palette.danger : Palette.accent
-                                )
-                            }
+                            sidebarSessionCard(session)
                         }
                     }
 
@@ -442,3 +434,168 @@ struct MainShellView: View {
     }
 #endif
 }
+
+#if os(iOS)
+extension MainShellView {
+    @ViewBuilder
+    private func sidebarSessionCard(_ session: SessionInfo) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            SidebarAvatarPicker(session: session)
+                .environmentObject(profileAvatarStore)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(AppBranding.title)
+                    .font(.custom("Avenir Next Demi Bold", size: 15))
+                    .foregroundStyle(Palette.highlight)
+
+                Text(session.displayName)
+                    .font(.custom("Avenir Next Demi Bold", size: 17))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(session.expireDate.isEmpty ? "Renew date -" : "Renew date \(session.expireDate)")
+                    .font(.custom("Avenir Next Medium", size: 12))
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(1)
+
+                StatusPill(
+                    text: session.isExpired ? "Expired" : "Active",
+                    tint: session.isExpired ? Palette.danger : Palette.accent
+                )
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private struct SidebarAvatarPicker: View {
+    @EnvironmentObject private var profileAvatarStore: ProfileAvatarStore
+    @State private var isShowingOptions = false
+    @State private var activeImageSource: SidebarAvatarImageSource?
+
+    let session: SessionInfo
+
+    var body: some View {
+        Button {
+            isShowingOptions = true
+        } label: {
+            avatarImage
+                .frame(width: 60, height: 60)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                )
+                .shadow(color: .black.opacity(0.10), radius: 10, y: 4)
+        }
+        .buttonStyle(.plain)
+        .confirmationDialog("Profile photo", isPresented: $isShowingOptions, titleVisibility: .visible) {
+            Button("Fotoğraf seç") {
+                activeImageSource = .photoLibrary
+            }
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button("Fotoğraf çek") {
+                    activeImageSource = .camera
+                }
+            }
+            if profileAvatarStore.imageData(for: session) != nil {
+                Button("Kaldır", role: .destructive) {
+                    profileAvatarStore.removeAvatar(for: session)
+                }
+            }
+            Button("Vazgeç", role: .cancel) {}
+        }
+        .sheet(item: $activeImageSource) { source in
+            SidebarAvatarImagePicker(sourceType: source.sourceType) { data in
+                if let data {
+                    profileAvatarStore.saveAvatarData(data, for: session)
+                }
+                activeImageSource = nil
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var avatarImage: some View {
+        if let data = profileAvatarStore.imageData(for: session),
+           let image = UIImage(data: data) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Palette.accentSoft, Color.white],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 30, weight: .medium))
+                    .foregroundStyle(Palette.accent)
+            }
+        }
+    }
+}
+
+private enum SidebarAvatarImageSource: String, Identifiable {
+    case photoLibrary
+    case camera
+
+    var id: String { rawValue }
+
+    var sourceType: UIImagePickerController.SourceType {
+        switch self {
+        case .photoLibrary:
+            return .photoLibrary
+        case .camera:
+            return .camera
+        }
+    }
+}
+
+private struct SidebarAvatarImagePicker: UIViewControllerRepresentable {
+    let sourceType: UIImagePickerController.SourceType
+    let onSelection: (Data?) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelection: onSelection)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let controller = UIImagePickerController()
+        controller.sourceType = sourceType
+        controller.allowsEditing = true
+        controller.delegate = context.coordinator
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let onSelection: (Data?) -> Void
+
+        init(onSelection: @escaping (Data?) -> Void) {
+            self.onSelection = onSelection
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+            onSelection(nil)
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            let image = (info[.editedImage] ?? info[.originalImage]) as? UIImage
+            let data = image?.jpegData(compressionQuality: 0.88) ?? image?.pngData()
+            picker.dismiss(animated: true)
+            onSelection(data)
+        }
+    }
+}
+#endif
