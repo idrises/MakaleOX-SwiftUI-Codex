@@ -125,15 +125,13 @@ struct MainShellView: View {
             #endif
         }
 #if os(iOS)
-        .sheet(item: modalDocumentBinding) { document in
+        .fullScreenCover(item: modalDocumentBinding) { document in
             DocumentViewerScreen(
                 document: document,
                 backLabel: "Close",
                 showsMetadataHeader: false,
                 onClose: { appState.activeDocument = nil }
             )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.hidden)
         }
         .sheet(item: modalVideoBinding) { video in
             VideoPlayerScreen(
