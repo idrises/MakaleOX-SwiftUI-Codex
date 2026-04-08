@@ -20,6 +20,50 @@ enum RepositoryError: LocalizedError {
 final class LegacyRepository {
     private let gateway = SQLGateway()
 
+    func persistArticleOpen(_ payload: PendingArticleOpenPayload) async throws {
+        let parameters: [Any?] = [
+            payload.author,
+            payload.title,
+            payload.journalName,
+            payload.year,
+            Date(),
+            payload.email,
+            payload.volume,
+            "Mac SwiftUI",
+            payload.issueTitle,
+            payload.folder,
+            payload.pdfLink
+        ]
+
+        do {
+            try await gateway.execute(
+                """
+                INSERT INTO usersOpenedArticle (
+                    author,
+                    Article,
+                    Journal,
+                    year,
+                    date,
+                    usermail,
+                    volume,
+                    platform,
+                    issueTitle,
+                    folder,
+                    pdfLink
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                parameters: parameters,
+                timeout: 30
+            )
+        } catch {
+            try await gateway.execute(
+                "INSERT INTO usersOpenedArticle (author, Article, Journal, year, date, usermail, volume, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                parameters: Array(parameters.prefix(8)),
+                timeout: 30
+            )
+        }
+    }
+
     func resolveHistoryReference(for entry: HistoryEntry) async throws -> HistoryReference? {
         switch entry.kind {
         case .article:
@@ -706,47 +750,7 @@ final class LegacyRepository {
     }
 
     func recordArticleOpen(_ article: Article, email: String) async {
-        let parameters: [Any?] = [
-            article.author,
-            article.title,
-            article.journalName,
-            article.year,
-            Date(),
-            email,
-            article.volume,
-            "Mac SwiftUI",
-            article.issueTitle,
-            article.folder,
-            article.pdfLink
-        ]
-
-        do {
-            try await gateway.execute(
-                """
-                INSERT INTO usersOpenedArticle (
-                    author,
-                    Article,
-                    Journal,
-                    year,
-                    date,
-                    usermail,
-                    volume,
-                    platform,
-                    issueTitle,
-                    folder,
-                    pdfLink
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                parameters: parameters,
-                timeout: 30
-            )
-        } catch {
-            _ = try? await gateway.execute(
-                "INSERT INTO usersOpenedArticle (author, Article, Journal, year, date, usermail, volume, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                parameters: Array(parameters.prefix(8)),
-                timeout: 30
-            )
-        }
+        _ = try? await persistArticleOpen(PendingArticleOpenPayload(article: article, email: email))
     }
 
     func recordChapterOpen(_ chapter: Chapter, email: String) async {

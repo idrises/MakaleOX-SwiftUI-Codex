@@ -15,11 +15,11 @@ final class HistoryStore: ObservableObject {
             return
         }
 
-        self.entries = entries.sorted { $0.openedAt > $1.openedAt }
+        self.entries = Self.sortedEntries(entries)
     }
 
     func add(_ entry: HistoryEntry) {
-        entries.removeAll { $0.title == entry.title && $0.urlString == entry.urlString }
+        entries.removeAll { $0.deduplicationKey == entry.deduplicationKey }
         entries.insert(entry, at: 0)
         if entries.count > 200 {
             entries = Array(entries.prefix(200))
@@ -42,9 +42,9 @@ final class HistoryStore: ObservableObject {
         }
 
         self.entries = baseEntries
-            .sorted { $0.openedAt > $1.openedAt }
+            .sorted(by: Self.historyEntrySort)
             .filter { entry in
-                let key = [entry.kind.title, entry.title, entry.subtitle, entry.urlString].joined(separator: "|")
+                let key = entry.deduplicationKey
                 if seenKeys.contains(key) {
                     return false
                 }
@@ -62,12 +62,140 @@ final class HistoryStore: ObservableObject {
     func update(_ entry: HistoryEntry) {
         guard let index = entries.firstIndex(where: { $0.id == entry.id }) else { return }
         entries[index] = entry
-        entries.sort { $0.openedAt > $1.openedAt }
+        entries.sort(by: Self.historyEntrySort)
         persist()
+    }
+
+    private static func sortedEntries(_ entries: [HistoryEntry]) -> [HistoryEntry] {
+        entries.sorted(by: historyEntrySort)
+    }
+
+    private static func historyEntrySort(_ lhs: HistoryEntry, _ rhs: HistoryEntry) -> Bool {
+        if lhs.openedAt != rhs.openedAt {
+            return lhs.openedAt > rhs.openedAt
+        }
+        if lhs.urlString.isEmpty != rhs.urlString.isEmpty {
+            return !lhs.urlString.isEmpty
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 
     private func persist() {
         if let data = try? JSONEncoder().encode(entries) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+    }
+}
+
+@MainActor
+final class OpenEventStore: ObservableObject {
+    @Published private(set) var records: [OpenEventRecord]
+
+    private let storageKey = "MakaleSwiftUI.open-events"
+    private let sentGracePeriod: TimeInterval = 120
+    private let sentRetention: TimeInterval = 24 * 60 * 60
+
+    init() {
+        guard
+            let data = UserDefaults.standard.data(forKey: storageKey),
+            let records = try? JSONDecoder().decode([OpenEventRecord].self, from: data)
+        else {
+            self.records = []
+            return
+        }
+
+        self.records = records
+        resetInterruptedSyncs()
+        pruneSentRecords()
+    }
+
+    func enqueue(_ record: OpenEventRecord) {
+        records.append(record)
+        sortAndPersist()
+    }
+
+    func beginSync(id: UUID) -> OpenEventRecord? {
+        guard let index = records.firstIndex(where: { $0.id == id }) else { return nil }
+        records[index].status = .syncing
+        records[index].retryCount += 1
+        records[index].lastAttemptAt = Date()
+        records[index].lastError = nil
+        persist()
+        return records[index]
+    }
+
+    func markSent(id: UUID) {
+        guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        records[index].status = .sent
+        records[index].syncedAt = Date()
+        records[index].lastError = nil
+        pruneSentRecords()
+        persist()
+    }
+
+    func markFailed(id: UUID, errorDescription: String) {
+        guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        records[index].status = .failed
+        records[index].lastError = errorDescription
+        persist()
+    }
+
+    func nextSyncCandidate(for email: String) -> OpenEventRecord? {
+        records
+            .filter { record in
+                guard let payload = record.articlePayload else { return false }
+                guard payload.email == email else { return false }
+                return record.status == .pending || record.status == .failed
+            }
+            .sorted { lhs, rhs in
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+            .first
+    }
+
+    func historyEntriesForMerge(email: String, kind: HistoryKind?) -> [HistoryEntry] {
+        let now = Date()
+        return records
+            .filter { record in
+                guard record.shouldMergeIntoHistory(now: now, sentGracePeriod: sentGracePeriod) else { return false }
+                guard let payload = record.articlePayload else { return false }
+                guard payload.email == email else { return false }
+                return kind == nil || kind == .article
+            }
+            .map(\.historyEntry)
+            .sorted { $0.openedAt > $1.openedAt }
+    }
+
+    func clear() {
+        records = []
+        persist()
+    }
+
+    private func pruneSentRecords() {
+        let now = Date()
+        records.removeAll { record in
+            guard record.status == .sent, let syncedAt = record.syncedAt else { return false }
+            return now.timeIntervalSince(syncedAt) > sentRetention
+        }
+    }
+
+    private func resetInterruptedSyncs() {
+        for index in records.indices where records[index].status == .syncing {
+            records[index].status = .pending
+        }
+    }
+
+    private func sortAndPersist() {
+        records.sort { $0.createdAt > $1.createdAt }
+        pruneSentRecords()
+        persist()
+    }
+
+    private func persist() {
+        if let data = try? JSONEncoder().encode(records) {
             UserDefaults.standard.set(data, forKey: storageKey)
         }
     }

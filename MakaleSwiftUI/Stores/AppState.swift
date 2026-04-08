@@ -53,6 +53,39 @@ private enum SearchVideoRailCandidate {
     }
 }
 
+private actor OpenEventSyncService {
+    private var isSyncing = false
+
+    func flushPendingEvents(
+        email: String,
+        store: OpenEventStore,
+        repository: LegacyRepository
+    ) async {
+        guard !isSyncing else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+
+        while let candidate = await store.nextSyncCandidate(for: email) {
+            guard let event = await store.beginSync(id: candidate.id) else { continue }
+
+            do {
+                switch event.kind {
+                case .article:
+                    guard let payload = event.articlePayload else {
+                        await store.markFailed(id: event.id, errorDescription: "Missing article payload.")
+                        continue
+                    }
+                    try await repository.persistArticleOpen(payload)
+                }
+
+                await store.markSent(id: event.id)
+            } catch {
+                await store.markFailed(id: event.id, errorDescription: error.localizedDescription)
+            }
+        }
+    }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var session: SessionInfo?
@@ -103,10 +136,12 @@ final class AppState: ObservableObject {
     let sessionStore = SessionStore()
     let favoritesStore = FavoritesStore()
     let historyStore = HistoryStore()
+    let openEventStore = OpenEventStore()
     let videoDownloadManager = VideoDownloadManager.shared
 
     private let repository = LegacyRepository()
     private let assetLibrary = AssetLibrary()
+    private let openEventSyncService = OpenEventSyncService()
     private var hasLoadedHistory = false
 
     init() {
@@ -118,6 +153,7 @@ final class AppState: ObservableObject {
         session = sessionStore.session
         guard session != nil else { return }
         selectedSection = .dashboard
+        syncPendingOpenEventsInBackground()
     }
 
     func activate(email: String, keyPart1: String, keyPart2: String, keyPart3: String) async {
@@ -191,10 +227,12 @@ final class AppState: ObservableObject {
     func refreshHistory(kind: HistoryKind? = nil) async {
         guard let session else { return }
         isRefreshingHistory = true
+        syncPendingOpenEventsInBackground()
 
         do {
             let entries = try await self.repository.fetchHistory(email: session.email, kind: kind)
-            self.historyStore.replace(with: entries, for: kind)
+            let mergedEntries = mergeHistoryEntries(entries, kind: kind, email: session.email)
+            self.historyStore.replace(with: mergedEntries, for: kind)
             self.hasLoadedHistory = true
         } catch {
             activeAlert = AppAlert(
@@ -648,9 +686,7 @@ final class AppState: ObservableObject {
         if let resolvedURL {
             activeVideo = nil
             activeDocument = DocumentPresentation(title: article.title, url: resolvedURL)
-            recordOpenEvent {
-                await self.repository.recordArticleOpen(article, email: session.email)
-            }
+            enqueueArticleOpenEvent(article, historyEntry: historyEntry.updating(urlString: resolvedURL.path), email: session.email)
         }
     }
 
@@ -1312,6 +1348,7 @@ final class AppState: ObservableObject {
         sessionStore.clear()
         session = nil
         historyStore.replace(with: [])
+        openEventStore.clear()
         resetRemoteContent()
         selectedSection = .dashboard
     }
@@ -1488,6 +1525,29 @@ final class AppState: ObservableObject {
     private func recordOpenEvent(_ operation: @escaping @MainActor () async -> Void) {
         Task(priority: .utility) {
             await operation()
+        }
+    }
+
+    private func enqueueArticleOpenEvent(_ article: Article, historyEntry: HistoryEntry, email: String) {
+        let payload = PendingArticleOpenPayload(article: article, email: email)
+        openEventStore.enqueue(.article(payload: payload, historyEntry: historyEntry))
+        syncPendingOpenEventsInBackground()
+    }
+
+    private func mergeHistoryEntries(_ serverEntries: [HistoryEntry], kind: HistoryKind?, email: String) -> [HistoryEntry] {
+        let localPendingEntries = openEventStore.historyEntriesForMerge(email: email, kind: kind)
+        return (serverEntries + localPendingEntries)
+            .sorted { $0.openedAt > $1.openedAt }
+    }
+
+    private func syncPendingOpenEventsInBackground() {
+        guard let email = session?.email else { return }
+        Task(priority: .utility) {
+            await self.openEventSyncService.flushPendingEvents(
+                email: email,
+                store: self.openEventStore,
+                repository: self.repository
+            )
         }
     }
 }

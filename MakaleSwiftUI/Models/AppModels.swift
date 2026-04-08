@@ -484,6 +484,21 @@ struct HistoryEntry: Identifiable, Codable, Hashable {
             openedAt: openedAt
         )
     }
+
+    var deduplicationKey: String {
+        if let reference {
+            return [
+                kind.rawValue,
+                reference.primary,
+                reference.secondary,
+                reference.tertiary,
+                title,
+                subtitle
+            ].joined(separator: "|")
+        }
+
+        return [kind.rawValue, title, subtitle, detail, urlString].joined(separator: "|")
+    }
 }
 
 struct HistoryReference: Codable, Hashable {
@@ -506,6 +521,82 @@ struct HistoryReference: Codable, Hashable {
 
     static func videoSet(setName: String, link: String) -> HistoryReference {
         HistoryReference(kind: .videoSet, primary: setName, secondary: link, tertiary: "")
+    }
+}
+
+enum OpenEventKind: String, Codable, Hashable {
+    case article
+}
+
+enum OpenEventSyncStatus: String, Codable, Hashable {
+    case pending
+    case syncing
+    case sent
+    case failed
+}
+
+struct PendingArticleOpenPayload: Codable, Hashable {
+    let email: String
+    let author: String
+    let title: String
+    let journalName: String
+    let issueTitle: String
+    let year: String
+    let volume: String
+    let folder: String
+    let pdfLink: String
+
+    init(article: Article, email: String) {
+        self.email = email
+        self.author = article.author
+        self.title = article.title
+        self.journalName = article.journalName
+        self.issueTitle = article.issueTitle
+        self.year = article.year
+        self.volume = article.volume
+        self.folder = article.folder
+        self.pdfLink = article.pdfLink
+    }
+}
+
+struct OpenEventRecord: Identifiable, Codable, Hashable {
+    let id: UUID
+    let kind: OpenEventKind
+    let createdAt: Date
+    let historyEntry: HistoryEntry
+    let articlePayload: PendingArticleOpenPayload?
+    var status: OpenEventSyncStatus
+    var retryCount: Int
+    var lastAttemptAt: Date?
+    var syncedAt: Date?
+    var lastError: String?
+
+    static func article(
+        payload: PendingArticleOpenPayload,
+        historyEntry: HistoryEntry
+    ) -> OpenEventRecord {
+        OpenEventRecord(
+            id: UUID(),
+            kind: .article,
+            createdAt: historyEntry.openedAt,
+            historyEntry: historyEntry,
+            articlePayload: payload,
+            status: .pending,
+            retryCount: 0,
+            lastAttemptAt: nil,
+            syncedAt: nil,
+            lastError: nil
+        )
+    }
+
+    func shouldMergeIntoHistory(now: Date = Date(), sentGracePeriod: TimeInterval = 120) -> Bool {
+        switch status {
+        case .pending, .syncing, .failed:
+            return true
+        case .sent:
+            guard let syncedAt else { return false }
+            return now.timeIntervalSince(syncedAt) <= sentGracePeriod
+        }
     }
 }
 
