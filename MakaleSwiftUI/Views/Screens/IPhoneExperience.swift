@@ -603,6 +603,8 @@ private struct PhoneRowCard<Footer: View>: View {
     let detail: String
     let badgeText: String?
     let trailingText: String?
+    let favoriteSelected: Bool?
+    let favoriteAction: (() -> Void)?
     let accessory: Footer
 
     init(
@@ -612,6 +614,8 @@ private struct PhoneRowCard<Footer: View>: View {
         detail: String = "",
         badgeText: String? = nil,
         trailingText: String? = nil,
+        favoriteSelected: Bool? = nil,
+        favoriteAction: (() -> Void)? = nil,
         @ViewBuilder accessory: () -> Footer = { EmptyView() }
     ) {
         self.artworkURLs = artworkURLs
@@ -620,6 +624,8 @@ private struct PhoneRowCard<Footer: View>: View {
         self.detail = detail
         self.badgeText = badgeText
         self.trailingText = trailingText
+        self.favoriteSelected = favoriteSelected
+        self.favoriteAction = favoriteAction
         self.accessory = accessory()
     }
 
@@ -688,6 +694,12 @@ private struct PhoneRowCard<Footer: View>: View {
         }
         .padding(12)
         .background(Color.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            if let favoriteSelected, let favoriteAction {
+                FavoriteBadgeButton(isSelected: favoriteSelected, action: favoriteAction)
+                    .padding(10)
+            }
+        }
     }
 }
 
@@ -1417,21 +1429,22 @@ private struct PhoneLibraryScreen: View {
                     } else {
                         LazyVStack(spacing: 12) {
                             ForEach(filteredJournals, id: \.id) { journal in
-                                Button {
+                                PhoneRowCard(
+                                    artworkURLs: LegacyConfig.coverCandidates(for: journal.name),
+                                    title: journal.name,
+                                    subtitle: journal.subject.isEmpty ? journal.issn : journal.subject,
+                                    detail: journal.subject.isEmpty ? "" : journal.issn,
+                                    badgeText: "Journal",
+                                    trailingText: "Open",
+                                    favoriteSelected: appState.favoritesStore.isFavorite(journal: journal),
+                                    favoriteAction: { appState.favoritesStore.toggleJournal(journal) }
+                                )
+                                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .onTapGesture {
                                     activeJournal = journal
                                     activeIssue = nil
                                     Task { await appState.selectJournal(journal) }
-                                } label: {
-                                    PhoneRowCard(
-                                        artworkURLs: LegacyConfig.coverCandidates(for: journal.name),
-                                        title: journal.name,
-                                        subtitle: journal.subject.isEmpty ? journal.issn : journal.subject,
-                                        detail: journal.subject.isEmpty ? "" : journal.issn,
-                                        badgeText: "Journal",
-                                        trailingText: "Open"
-                                    )
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -1447,16 +1460,23 @@ private struct PhoneLibraryScreen: View {
                 title: journal.name,
                 subtitle: "Select an issue to open its article list."
             ) {
-                Button {
-                    activeJournal = nil
-                    activeIssue = nil
-                    appState.journalReturnSection = nil
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Palette.accent)
+                HStack(spacing: 10) {
+                    FavoriteBadgeButton(
+                        isSelected: appState.favoritesStore.isFavorite(journal: journal),
+                        action: { appState.favoritesStore.toggleJournal(journal) }
+                    )
+
+                    Button {
+                        activeJournal = nil
+                        activeIssue = nil
+                        appState.journalReturnSection = nil
+                    } label: {
+                        Label("Back", systemImage: "chevron.left")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Palette.accent)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
             if appState.isLoadingJournalIssues {
@@ -1568,25 +1588,21 @@ private struct PhoneLibraryScreen: View {
                     } else {
                         LazyVStack(spacing: 12) {
                             ForEach(filteredBooks, id: \.id) { book in
-                                Button {
+                                PhoneRowCard(
+                                    artworkURLs: artworkURLs(for: book),
+                                    title: book.title,
+                                    subtitle: book.editors,
+                                    detail: [book.year, book.company].filter { !$0.isEmpty }.joined(separator: " • "),
+                                    badgeText: "Book",
+                                    trailingText: "Open",
+                                    favoriteSelected: appState.favoritesStore.isFavorite(book: book),
+                                    favoriteAction: { appState.favoritesStore.toggleBook(book) }
+                                )
+                                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .onTapGesture {
                                     activeBook = book
                                     Task { await appState.selectBook(book) }
-                                } label: {
-                                    PhoneRowCard(
-                                        artworkURLs: artworkURLs(for: book),
-                                        title: book.title,
-                                        subtitle: book.editors,
-                                        detail: [book.year, book.company].filter { !$0.isEmpty }.joined(separator: " • "),
-                                        badgeText: "Book",
-                                        trailingText: "Open"
-                                    ) {
-                                        if appState.favoritesStore.isFavorite(book: book) {
-                                            Image(systemName: "star.fill")
-                                                .foregroundStyle(Palette.gold)
-                                        }
-                                    }
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -1602,14 +1618,21 @@ private struct PhoneLibraryScreen: View {
                 title: book.title,
                 subtitle: book.editors
             ) {
-                Button {
-                    activeBook = nil
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Palette.accent)
+                HStack(spacing: 10) {
+                    FavoriteBadgeButton(
+                        isSelected: appState.favoritesStore.isFavorite(book: book),
+                        action: { appState.favoritesStore.toggleBook(book) }
+                    )
+
+                    Button {
+                        activeBook = nil
+                    } label: {
+                        Label("Back", systemImage: "chevron.left")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Palette.accent)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
             PhoneSurfaceCard {
@@ -1721,25 +1744,21 @@ private struct PhoneLibraryScreen: View {
                     } else {
                         LazyVStack(spacing: 12) {
                             ForEach(filteredSets, id: \.id) { set in
-                                Button {
+                                PhoneRowCard(
+                                    artworkURLs: LegacyConfig.videoCoverCandidates(name: set.setName),
+                                    title: set.setName,
+                                    subtitle: set.editors,
+                                    detail: set.subject,
+                                    badgeText: set.isAccessible(for: appState.session?.userID ?? "") ? "Available" : "Restricted",
+                                    trailingText: "Open",
+                                    favoriteSelected: appState.favoritesStore.isFavorite(videoSet: set),
+                                    favoriteAction: { appState.favoritesStore.toggleVideoSet(set) }
+                                )
+                                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .onTapGesture {
                                     activeSet = set
                                     Task { await appState.selectVideoSet(set) }
-                                } label: {
-                                    PhoneRowCard(
-                                        artworkURLs: LegacyConfig.videoCoverCandidates(name: set.setName),
-                                        title: set.setName,
-                                        subtitle: set.editors,
-                                        detail: set.subject,
-                                        badgeText: set.isAccessible(for: appState.session?.userID ?? "") ? "Available" : "Restricted",
-                                        trailingText: "Open"
-                                    ) {
-                                        if appState.favoritesStore.isFavorite(videoSet: set) {
-                                            Image(systemName: "star.fill")
-                                                .foregroundStyle(Palette.gold)
-                                        }
-                                    }
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -1755,14 +1774,21 @@ private struct PhoneLibraryScreen: View {
                 title: set.setName,
                 subtitle: "Playable entries for this collection."
             ) {
-                Button {
-                    activeSet = nil
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Palette.accent)
+                HStack(spacing: 10) {
+                    FavoriteBadgeButton(
+                        isSelected: appState.favoritesStore.isFavorite(videoSet: set),
+                        action: { appState.favoritesStore.toggleVideoSet(set) }
+                    )
+
+                    Button {
+                        activeSet = nil
+                    } label: {
+                        Label("Back", systemImage: "chevron.left")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Palette.accent)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
             if appState.isLoadingVideoSetEntries {
