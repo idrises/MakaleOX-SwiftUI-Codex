@@ -207,42 +207,22 @@ struct VideoSetsScreen: View {
                     .lineLimit(1)
             }
         } footer: {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center, spacing: 8) {
-                    StatusPill(
-                        text: isAccessible ? "Available" : "Restricted",
-                        tint: isAccessible ? Palette.accent : Palette.danger
-                    )
+            VStack(alignment: .leading, spacing: 8) {
+                StatusPill(
+                    text: isAccessible ? "Available" : "Restricted",
+                    tint: isAccessible ? Palette.accent : Palette.danger
+                )
 
-                    Spacer(minLength: 0)
-
-                    Button("Open Set") {
-                        appState.videoSetReturnSection = nil
-                        activeSet = set
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .tint(isAccessible ? Palette.accent : Palette.muted)
-                    .disabled(!isAccessible)
+                Button("Open Set") {
+                    appState.videoSetReturnSection = nil
+                    activeSet = set
                 }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    StatusPill(
-                        text: isAccessible ? "Available" : "Restricted",
-                        tint: isAccessible ? Palette.accent : Palette.danger
-                    )
-
-                    Button("Open Set") {
-                        appState.videoSetReturnSection = nil
-                        activeSet = set
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .tint(isAccessible ? Palette.accent : Palette.muted)
-                    .disabled(!isAccessible)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .tint(isAccessible ? Palette.accent : Palette.muted)
+                .disabled(!isAccessible)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(
             isSelected ? Palette.accentSoft.opacity(0.4) : Color.clear,

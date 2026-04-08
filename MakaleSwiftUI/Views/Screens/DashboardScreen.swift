@@ -276,7 +276,7 @@ struct DashboardScreen: View {
     }
 
     private var activityRowHeight: CGFloat {
-        122
+        172
     }
 
     private var activityGridHeight: CGFloat {
@@ -285,7 +285,7 @@ struct DashboardScreen: View {
 
     private var activityCardWidth: CGFloat {
 #if os(iOS)
-        horizontalSizeClass == .regular ? 312 : 260
+        horizontalSizeClass == .regular ? 336 : 260
 #else
         312
 #endif
@@ -475,40 +475,21 @@ struct DashboardScreen: View {
                     .lineLimit(1)
             }
         } footer: {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center, spacing: 5) {
-                    StatusPill(
-                        text: isAccessible ? "Available" : "Restricted",
-                        tint: isAccessible ? Palette.accent : Palette.danger
-                    )
+            VStack(alignment: .leading, spacing: 8) {
+                StatusPill(
+                    text: isAccessible ? "Available" : "Restricted",
+                    tint: isAccessible ? Palette.accent : Palette.danger
+                )
 
-                    Spacer(minLength: 0)
-
-                    Button("Open Set") {
-                        Task { await openVideoSetFromDashboard(set) }
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(Palette.accent)
-                    .controlSize(.small)
-                    .disabled(!isAccessible)
+                Button("Open Set") {
+                    Task { await openVideoSetFromDashboard(set) }
                 }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    StatusPill(
-                        text: isAccessible ? "Available" : "Restricted",
-                        tint: isAccessible ? Palette.accent : Palette.danger
-                    )
-
-                    Button("Open Set") {
-                        Task { await openVideoSetFromDashboard(set) }
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(Palette.accent)
-                    .controlSize(.small)
-                    .disabled(!isAccessible)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .buttonStyle(.bordered)
+                .tint(Palette.accent)
+                .controlSize(.small)
+                .disabled(!isAccessible)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
