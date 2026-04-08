@@ -832,8 +832,8 @@ private struct PhoneDashboardScreen: View {
 
             PhoneHeaderBlock(
                 eyebrow: "Overview",
-                title: "Your library, redesigned for phone",
-                subtitle: "Quick entry points, smaller cards, and thumb-friendly browsing."
+                title: "Your Library, Medical Research Library Entrance Gate",
+                subtitle: "A centralized platform providing access to trusted medical articles, research papers, and academic resources."
             )
 
             HStack(spacing: 6) {
