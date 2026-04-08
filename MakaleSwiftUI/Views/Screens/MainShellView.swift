@@ -45,6 +45,14 @@ struct MainShellView: View {
                     .background(.clear)
 
                     Spacer()
+
+                    #if os(iOS)
+                    if let session = appState.session, isRegularIPadLayout {
+                        SectionCard {
+                            sidebarFooterCard(session)
+                        }
+                    }
+                    #endif
                 }
                 .padding(sidebarPadding)
                 .frame(
@@ -62,8 +70,15 @@ struct MainShellView: View {
                     .padding(.horizontal, detailPadding)
                     .padding(.bottom, detailPadding)
                     .padding(.top, detailTopPadding)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            #if os(iOS)
+            .toolbar(usesVisibleIPadToolbar ? .visible : .hidden, for: .navigationBar)
+            #endif
         }
+        #if os(iOS)
+        .toolbar(removing: .sidebarToggle)
+        #endif
         .toolbar {
             #if os(iOS)
             if usesVisibleIPadToolbar {
@@ -124,9 +139,6 @@ struct MainShellView: View {
             }
             #endif
         }
-        #if os(iOS)
-        .toolbar(usesVisibleIPadToolbar ? .visible : .hidden, for: .navigationBar)
-        #endif
         .task(id: appState.selectedSection) {
             await appState.loadCurrentSectionIfNeeded()
         }
@@ -462,37 +474,62 @@ struct MainShellView: View {
 extension MainShellView {
     @ViewBuilder
     private func sidebarSessionCard(_ session: SessionInfo) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            SidebarAvatarPicker(session: session)
-                .environmentObject(profileAvatarStore)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(AppBranding.title)
+                .font(.custom("Avenir Next Demi Bold", size: 14))
+                .foregroundStyle(Palette.highlight)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(AppBranding.title)
-                    .font(.custom("Avenir Next Demi Bold", size: 14))
-                    .foregroundStyle(Palette.highlight)
+            Text(session.displayName)
+                .font(.custom("Avenir Next Demi Bold", size: 15))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
-                Text(session.displayName)
-                    .font(.custom("Avenir Next Demi Bold", size: 15))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+            Text(session.expireDate.isEmpty ? "Renew date -" : "Renew date \(session.expireDate)")
+                .font(.custom("Avenir Next Medium", size: 11))
+                .foregroundStyle(Palette.muted)
+                .lineLimit(1)
 
-                Text(session.expireDate.isEmpty ? "Renew date -" : "Renew date \(session.expireDate)")
-                    .font(.custom("Avenir Next Medium", size: 11))
-                    .foregroundStyle(Palette.muted)
-                    .lineLimit(1)
+            Text(session.isExpired ? "Expired" : "Active")
+                .font(.custom("Avenir Next Demi Bold", size: 10))
+                .foregroundStyle(session.isExpired ? Palette.danger : Palette.accent)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(
+                    (session.isExpired ? Palette.danger : Palette.accent).opacity(0.10),
+                    in: Capsule()
+                )
+        }
+    }
 
-                Text(session.isExpired ? "Expired" : "Active")
-                    .font(.custom("Avenir Next Demi Bold", size: 10))
-                    .foregroundStyle(session.isExpired ? Palette.danger : Palette.accent)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .background(
-                        (session.isExpired ? Palette.danger : Palette.accent).opacity(0.10),
-                        in: Capsule()
-                    )
+    @ViewBuilder
+    private func sidebarFooterCard(_ session: SessionInfo) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                SidebarAvatarPicker(session: session)
+                    .environmentObject(profileAvatarStore)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Profile photo")
+                        .font(.custom("Avenir Next Demi Bold", size: 12))
+                        .foregroundStyle(Palette.ink)
+
+                    Text("Tap to change")
+                        .font(.custom("Avenir Next Medium", size: 11))
+                        .foregroundStyle(Palette.muted)
+                }
+
+                Spacer(minLength: 0)
             }
 
-            Spacer(minLength: 0)
+            Button {
+                splitViewVisibility = .detailOnly
+            } label: {
+                Label("Hide Menu", systemImage: "sidebar.right")
+                    .font(.custom("Avenir Next Demi Bold", size: 13))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Palette.accent)
         }
     }
 }
