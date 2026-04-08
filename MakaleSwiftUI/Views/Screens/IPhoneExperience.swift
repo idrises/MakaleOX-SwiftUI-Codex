@@ -1097,7 +1097,7 @@ private struct PhoneDashboardScreen: View {
                     )
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        LazyHStack(spacing: 10) {
                             ForEach(activityEntries, id: \.id) { entry in
                                 Button {
                                     Task {
@@ -1133,7 +1133,7 @@ private struct PhoneDashboardScreen: View {
                     )
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        LazyHStack(spacing: 10) {
                             ForEach(appState.dashboard.recentIssues, id: \.id) { issue in
                                 Button {
                                     destination = .issue(issue)
@@ -1166,7 +1166,7 @@ private struct PhoneDashboardScreen: View {
                     )
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        LazyHStack(spacing: 10) {
                             ForEach(downloadedShelfItems, id: \.id) { item in
                                 if let downloadedItem = item.downloadedItem {
                                     Button {
@@ -1211,7 +1211,7 @@ private struct PhoneDashboardScreen: View {
                 subtitle: "Long-form references surfaced for your subject."
             ) {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    LazyHStack(spacing: 10) {
                         ForEach(appState.dashboard.recentBooks, id: \.id) { book in
                             Button {
                                 destination = .book(book)
@@ -1236,7 +1236,7 @@ private struct PhoneDashboardScreen: View {
                 subtitle: "Tap directly into the most recent video materials."
             ) {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    LazyHStack(spacing: 10) {
                         ForEach(appState.dashboard.recentVideos, id: \.id) { video in
                             Button {
                                 Task { await appState.playVideo(video) }
@@ -1262,7 +1262,7 @@ private struct PhoneDashboardScreen: View {
                 subtitle: "Grouped collections you can open in one tap."
             ) {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    LazyHStack(spacing: 10) {
                         ForEach(appState.dashboard.recentVideoSets, id: \.id) { set in
                             Button {
                                 destination = .videoSet(set)

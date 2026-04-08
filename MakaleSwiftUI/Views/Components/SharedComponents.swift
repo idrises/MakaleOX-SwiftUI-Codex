@@ -7,6 +7,7 @@ typealias PlatformImage = UIImage
 #endif
 import AVKit
 import CryptoKit
+import ImageIO
 import PDFKit
 import SwiftUI
 
@@ -207,7 +208,11 @@ struct FavoriteBadgeButton: View {
 
 @MainActor
 private final class ArtworkLoader: ObservableObject {
-    private static let cache = NSCache<NSURL, PlatformImage>()
+    private static let cache: NSCache<NSURL, PlatformImage> = {
+        let cache = NSCache<NSURL, PlatformImage>()
+        cache.countLimit = 240
+        return cache
+    }()
     private static let diskCacheDirectory: URL? = {
         guard let baseDirectory = try? LegacyConfig.applicationSupportDirectory() else { return nil }
         let cacheDirectory = baseDirectory.appendingPathComponent("ArtworkCache", isDirectory: true)
@@ -291,7 +296,7 @@ private final class ArtworkLoader: ObservableObject {
                 let (data, response) = try await URLSession.shared.data(for: request)
                 guard let httpResponse = response as? HTTPURLResponse,
                       (200...299).contains(httpResponse.statusCode),
-                      let image = PlatformImage(data: data) else {
+                      let image = thumbnailImage(from: data) else {
                     continue
                 }
 
@@ -309,7 +314,7 @@ private final class ArtworkLoader: ObservableObject {
     private static func diskCachedImage(for url: URL) -> PlatformImage? {
         guard let fileURL = cacheFileURL(for: url),
               let data = try? Data(contentsOf: fileURL),
-              let image = PlatformImage(data: data) else {
+              let image = thumbnailImage(from: data) else {
             return nil
         }
 
@@ -326,6 +331,33 @@ private final class ArtworkLoader: ObservableObject {
         let digest = SHA256.hash(data: Data(url.absoluteString.utf8))
         let fileName = digest.map { String(format: "%02x", $0) }.joined()
         return diskCacheDirectory.appendingPathComponent(fileName).appendingPathExtension("img")
+    }
+
+    private static func thumbnailImage(from data: Data, maxPixelSize: CGFloat = 420) -> PlatformImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceShouldCache: false
+        ]
+        guard let source = CGImageSourceCreateWithData(data as CFData, options as CFDictionary) else {
+            return nil
+        }
+
+        let downsampleOptions: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, downsampleOptions as CFDictionary) else {
+            return nil
+        }
+
+#if canImport(AppKit)
+        return NSImage(cgImage: cgImage, size: .zero)
+#elseif canImport(UIKit)
+        return UIImage(cgImage: cgImage)
+#else
+        return nil
+#endif
     }
 }
 
