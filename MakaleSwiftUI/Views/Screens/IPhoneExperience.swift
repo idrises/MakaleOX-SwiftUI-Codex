@@ -76,6 +76,17 @@ private enum PhoneSearchPage: String, CaseIterable, Identifiable {
         case .videoSets: return "Set"
         }
     }
+
+    var videoRailScope: SearchVideoRailScope {
+        switch self {
+        case .videos:
+            return .videos
+        case .videoSets:
+            return .videoSets
+        case .all, .journals, .books:
+            return .all
+        }
+    }
 }
 
 private enum PhoneHistoryPage: String, CaseIterable, Identifiable {
@@ -1936,7 +1947,7 @@ private struct PhoneSearchExperienceScreen: View {
                             .buttonStyle(.plain)
                         case .video(let video):
                             Button {
-                                Task { await appState.playVideo(video) }
+                                Task { await appState.playVideoFromSearch(video, scope: selectedPage.videoRailScope) }
                             } label: {
                                 PhoneRowCard(
                                     artworkURLs: LegacyConfig.videoCoverCandidates(name: video.imageLink),
@@ -1950,7 +1961,7 @@ private struct PhoneSearchExperienceScreen: View {
                             .buttonStyle(.plain)
                         case .videoSet(let entry):
                             Button {
-                                Task { await appState.openVideoSetEntryFromSearch(entry) }
+                                Task { await appState.openVideoSetEntryFromSearch(entry, scope: selectedPage.videoRailScope) }
                             } label: {
                                 PhoneRowCard(
                                     artworkURLs: LegacyConfig.videoCoverCandidates(name: entry.imageLink),

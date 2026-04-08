@@ -316,6 +316,12 @@ struct SearchResults {
     }
 }
 
+enum SearchVideoRailScope {
+    case all
+    case videos
+    case videoSets
+}
+
 struct ProfileSummary {
     let fullName: String
     let email: String

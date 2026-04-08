@@ -380,7 +380,7 @@ struct SearchScreen: View {
                 ),
                 buttonTitle: "Play Video"
             ) {
-                Task { await appState.playVideo(video) }
+                Task { await appState.playVideoFromSearch(video) }
             }
         }
     }

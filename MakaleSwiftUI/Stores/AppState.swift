@@ -34,6 +34,25 @@ private enum PreferredHistoryPage: String {
     }
 }
 
+private enum VideoRailContext {
+    case source
+    case search(SearchVideoRailScope)
+}
+
+private enum SearchVideoRailCandidate {
+    case video(Video)
+    case videoSet(VideoSetEntry)
+
+    var sortDate: Date {
+        switch self {
+        case .video(let video):
+            return video.sortDate ?? .distantPast
+        case .videoSet(let entry):
+            return entry.sortDate ?? .distantPast
+        }
+    }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var session: SessionInfo?
@@ -59,6 +78,7 @@ final class AppState: ObservableObject {
     @Published var pendingVideoSetNavigationID: String?
     @Published var videoSetReturnSection: AppSection?
     @Published var searchResults = SearchResults()
+    @Published var currentSearchQuery = ""
     @Published var profile: ProfileSummary?
     @Published var activeDocument: DocumentPresentation?
     @Published var activeVideo: VideoPresentation?
@@ -524,9 +544,12 @@ final class AppState: ObservableObject {
     func runSearch(_ text: String) async {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.isEmpty {
+            currentSearchQuery = ""
             searchResults = SearchResults()
             return
         }
+
+        currentSearchQuery = query
 
         await perform("Searching library") { [self] in
             let session = try await self.syncSessionFromServer()
@@ -662,6 +685,14 @@ final class AppState: ObservableObject {
     }
 
     func playVideo(_ video: Video) async {
+        await playVideo(video, railContext: .source)
+    }
+
+    func playVideoFromSearch(_ video: Video, scope: SearchVideoRailScope = .all) async {
+        await playVideo(video, railContext: .search(scope))
+    }
+
+    private func playVideo(_ video: Video, railContext: VideoRailContext) async {
         guard let session else { return }
         guard validateSession(session) else { return }
         guard let url = LegacyConfig.videoRemoteURL(bookJournal: video.bookJournal, link: video.remoteLink) else {
@@ -682,11 +713,19 @@ final class AppState: ObservableObject {
             )
         )
         activeDocument = nil
-        let relatedVideos = await resolveRelatedVideos(for: video, session: session)
-        activeVideo = makeVideoPresentation(for: video, url: url, relatedVideos: relatedVideos)
+        switch railContext {
+        case .source:
+            let relatedVideos = await resolveRelatedVideos(for: video, session: session)
+            activeVideo = makeVideoPresentation(for: video, url: url, relatedVideos: relatedVideos)
+        case .search(let scope):
+            activeVideo = makeSearchVideoPresentation(
+                currentItem: makeVideoRailItem(for: video, url: url),
+                scope: scope
+            )
+        }
     }
 
-    func openVideoSetEntryFromSearch(_ entry: VideoSetEntry) async {
+    func openVideoSetEntryFromSearch(_ entry: VideoSetEntry, scope: SearchVideoRailScope = .all) async {
         do {
             let activeSession = try await syncSessionFromServer()
             guard validateSession(activeSession) else { return }
@@ -710,7 +749,7 @@ final class AppState: ObservableObject {
                 return
             }
 
-            await playVideoSetEntry(entry, from: resolvedSet)
+            await playVideoSetEntry(entry, from: resolvedSet, railContext: .search(scope))
         } catch {
             activeAlert = AppAlert(
                 title: "Something Went Wrong",
@@ -720,6 +759,14 @@ final class AppState: ObservableObject {
     }
 
     func playVideoSetEntry(_ entry: VideoSetEntry, from set: VideoSet) async {
+        await playVideoSetEntry(entry, from: set, railContext: .source)
+    }
+
+    private func playVideoSetEntry(
+        _ entry: VideoSetEntry,
+        from set: VideoSet,
+        railContext: VideoRailContext
+    ) async {
         guard let session else { return }
         guard validateSession(session) else { return }
         guard set.isAccessible(for: session.userID) else {
@@ -744,8 +791,16 @@ final class AppState: ObservableObject {
             )
         )
         activeDocument = nil
-        let relatedEntries = await resolveRelatedVideoSetEntries(for: entry)
-        activeVideo = makeVideoPresentation(for: entry, url: url, relatedEntries: relatedEntries)
+        switch railContext {
+        case .source:
+            let relatedEntries = await resolveRelatedVideoSetEntries(for: entry)
+            activeVideo = makeVideoPresentation(for: entry, url: url, relatedEntries: relatedEntries)
+        case .search(let scope):
+            activeVideo = makeSearchVideoPresentation(
+                currentItem: makeVideoRailItem(for: entry, url: url),
+                scope: scope
+            )
+        }
     }
 
     func reopenHistoryEntry(_ entry: HistoryEntry) async {
@@ -944,6 +999,18 @@ final class AppState: ObservableObject {
         )
     }
 
+    private func makeSearchVideoPresentation(
+        currentItem: VideoRailItem,
+        scope: SearchVideoRailScope
+    ) -> VideoPresentation {
+        makeVideoPresentation(
+            currentItem: currentItem,
+            railItems: searchRailItems(for: scope),
+            railTitle: "Search results",
+            railSubtitle: currentSearchQuery.isEmpty ? "Matching videos" : currentSearchQuery
+        )
+    }
+
     private func makeVideoRailItem(for video: Video, url: URL? = nil) -> VideoRailItem {
         VideoRailItem(
             id: video.id,
@@ -1070,6 +1137,31 @@ final class AppState: ObservableObject {
             secondary: [],
             preferredItem: nil as VideoSetEntry?
         )
+    }
+
+    private func searchRailItems(for scope: SearchVideoRailScope) -> [VideoRailItem] {
+        let candidates: [SearchVideoRailCandidate]
+        switch scope {
+        case .all:
+            candidates =
+                searchResults.videos.map(SearchVideoRailCandidate.video)
+                + searchResults.videoSetEntries.map(SearchVideoRailCandidate.videoSet)
+        case .videos:
+            candidates = searchResults.videos.map(SearchVideoRailCandidate.video)
+        case .videoSets:
+            candidates = searchResults.videoSetEntries.map(SearchVideoRailCandidate.videoSet)
+        }
+
+        return candidates
+            .sorted { $0.sortDate > $1.sortDate }
+            .map { candidate in
+                switch candidate {
+                case .video(let video):
+                    return makeVideoRailItem(for: video)
+                case .videoSet(let entry):
+                    return makeVideoRailItem(for: entry)
+                }
+            }
     }
 
     private func mergeUniqueItems<Item: Identifiable>(
