@@ -27,6 +27,7 @@ BEGIN
     ALTER TABLE dbo.usersOpenedArticle ADD pdfLink NVARCHAR(255) NULL;
 END;
 
+DECLARE @migrationSql NVARCHAR(MAX) = N'
 ;WITH candidateMatches AS (
     SELECT
         ua.usermail,
@@ -49,12 +50,12 @@ END;
           AND m.dergi = ua.Journal
         ORDER BY
             CASE
-                WHEN ISNULL(ua.year, '') <> ''
+                WHEN ISNULL(ua.year, '''') <> ''''
                  AND m.YIL = ua.year THEN 0
                 ELSE 1
             END,
             CASE
-                WHEN ISNULL(ua.volume, '') <> ''
+                WHEN ISNULL(ua.volume, '''') <> ''''
                  AND m.VOLUME = ua.volume THEN 0
                 ELSE 1
             END,
@@ -63,22 +64,22 @@ END;
             m.VOLUME DESC
     ) AS resolved
     WHERE
-        ISNULL(ua.folder, '') = ''
-        OR ISNULL(ua.pdfLink, '') = ''
-        OR ISNULL(ua.issueTitle, '') = ''
+        ISNULL(ua.folder, '''') = ''''
+        OR ISNULL(ua.pdfLink, '''') = ''''
+        OR ISNULL(ua.issueTitle, '''') = ''''
 )
 UPDATE ua
 SET
     ua.issueTitle = CASE
-        WHEN ISNULL(ua.issueTitle, '') = '' THEN candidateMatches.resolvedIssueTitle
+        WHEN ISNULL(ua.issueTitle, '''') = '''' THEN candidateMatches.resolvedIssueTitle
         ELSE ua.issueTitle
     END,
     ua.folder = CASE
-        WHEN ISNULL(ua.folder, '') = '' THEN candidateMatches.resolvedFolder
+        WHEN ISNULL(ua.folder, '''') = '''' THEN candidateMatches.resolvedFolder
         ELSE ua.folder
     END,
     ua.pdfLink = CASE
-        WHEN ISNULL(ua.pdfLink, '') = '' THEN candidateMatches.resolvedPdfLink
+        WHEN ISNULL(ua.pdfLink, '''') = '''' THEN candidateMatches.resolvedPdfLink
         ELSE ua.pdfLink
     END
 FROM dbo.usersOpenedArticle AS ua
@@ -86,13 +87,16 @@ INNER JOIN candidateMatches
     ON ua.usermail = candidateMatches.usermail
    AND ua.Article = candidateMatches.Article
    AND ua.Journal = candidateMatches.Journal
-   AND ISNULL(ua.year, '') = ISNULL(candidateMatches.year, '')
-   AND ISNULL(ua.volume, '') = ISNULL(candidateMatches.volume, '')
+   AND ISNULL(ua.year, '''') = ISNULL(candidateMatches.year, '''')
+   AND ISNULL(ua.volume, '''') = ISNULL(candidateMatches.volume, '''')
    AND ua.[date] = candidateMatches.[date];
 
 SELECT
     COUNT(*) AS totalRows,
-    SUM(CASE WHEN ISNULL(folder, '') <> '' THEN 1 ELSE 0 END) AS rowsWithFolder,
-    SUM(CASE WHEN ISNULL(pdfLink, '') <> '' THEN 1 ELSE 0 END) AS rowsWithPdfLink,
-    SUM(CASE WHEN ISNULL(issueTitle, '') <> '' THEN 1 ELSE 0 END) AS rowsWithIssueTitle
+    SUM(CASE WHEN ISNULL(folder, '''') <> '''' THEN 1 ELSE 0 END) AS rowsWithFolder,
+    SUM(CASE WHEN ISNULL(pdfLink, '''') <> '''' THEN 1 ELSE 0 END) AS rowsWithPdfLink,
+    SUM(CASE WHEN ISNULL(issueTitle, '''') <> '''' THEN 1 ELSE 0 END) AS rowsWithIssueTitle
 FROM dbo.usersOpenedArticle;
+';
+
+EXEC sys.sp_executesql @migrationSql;
