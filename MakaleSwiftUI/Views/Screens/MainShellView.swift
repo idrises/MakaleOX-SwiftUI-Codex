@@ -63,6 +63,9 @@ struct MainShellView: View {
                     alignment: .topLeading
                 )
             }
+            #if os(iOS)
+            .toolbar(removing: .sidebarToggle)
+            #endif
             .navigationSplitViewColumnWidth(min: sidebarMinWidth, ideal: sidebarIdealWidth, max: sidebarMaxWidth)
         } detail: {
             AppCanvas {
@@ -76,9 +79,6 @@ struct MainShellView: View {
             .toolbar(usesVisibleIPadToolbar ? .visible : .hidden, for: .navigationBar)
             #endif
         }
-        #if os(iOS)
-        .toolbar(removing: .sidebarToggle)
-        #endif
         .toolbar {
             #if os(iOS)
             if usesVisibleIPadToolbar {
@@ -503,34 +503,40 @@ extension MainShellView {
 
     @ViewBuilder
     private func sidebarFooterCard(_ session: SessionInfo) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
-                SidebarAvatarPicker(session: session)
-                    .environmentObject(profileAvatarStore)
+        HStack(alignment: .center, spacing: 12) {
+            SidebarAvatarPicker(session: session)
+                .environmentObject(profileAvatarStore)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Profile photo")
-                        .font(.custom("Avenir Next Demi Bold", size: 12))
-                        .foregroundStyle(Palette.ink)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Profile photo")
+                    .font(.custom("Avenir Next Demi Bold", size: 12))
+                    .foregroundStyle(Palette.ink)
 
-                    Text("Tap to change")
-                        .font(.custom("Avenir Next Medium", size: 11))
-                        .foregroundStyle(Palette.muted)
-                }
-
-                Spacer(minLength: 0)
+                Text("Tap to change")
+                    .font(.custom("Avenir Next Medium", size: 11))
+                    .foregroundStyle(Palette.muted)
             }
+
+            Spacer(minLength: 0)
 
             Button {
-                splitViewVisibility = .detailOnly
+                toggleSidebarVisibility()
             } label: {
-                Label("Hide Menu", systemImage: "sidebar.right")
-                    .font(.custom("Avenir Next Demi Bold", size: 13))
-                    .frame(maxWidth: .infinity)
+                Image(systemName: splitViewVisibility == .detailOnly ? "sidebar.leading" : "sidebar.trailing")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .frame(width: 42, height: 42)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Palette.accent.opacity(0.12))
+                    )
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Palette.accent)
+            .buttonStyle(.plain)
         }
+    }
+
+    private func toggleSidebarVisibility() {
+        splitViewVisibility = splitViewVisibility == .detailOnly ? .all : .detailOnly
     }
 }
 
