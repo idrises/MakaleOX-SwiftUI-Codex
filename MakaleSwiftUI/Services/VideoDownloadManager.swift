@@ -114,8 +114,12 @@ final class VideoDownloadManager: NSObject, ObservableObject {
             return .downloading(progress)
         }
 
+        if records[downloadID]?.isPaused == true {
+            return .paused(records[downloadID]?.lastKnownStatus)
+        }
+
         if activeTasksByDownloadID[downloadID] != nil || queuedIDs.contains(downloadID) {
-            return .queued
+            return .queued(records[downloadID]?.lastKnownStatus)
         }
 
         if let error = records[downloadID]?.lastErrorMessage, !error.isEmpty {
@@ -141,11 +145,30 @@ final class VideoDownloadManager: NSObject, ObservableObject {
             }
     }
 
+    func downloadShelfItems(kind: VideoSourceKind? = nil) -> [DownloadShelfItem] {
+        records.values
+            .compactMap { record -> DownloadShelfItem? in
+                guard kind == nil || record.sourceKind == kind else { return nil }
+                let state = downloadState(forRemoteURL: record.remoteURL ?? URL(fileURLWithPath: record.id))
+                switch state {
+                case .downloaded(let localURL):
+                    return DownloadShelfItem(record: record, state: state, localURL: localURL)
+                case .queued(_), .downloading(_), .paused(_):
+                    return DownloadShelfItem(record: record, state: state, localURL: nil)
+                case .failed(_), .notDownloaded:
+                    return nil
+                }
+            }
+            .sorted(by: shelfItemSort)
+    }
+
     func startDownload(for item: VideoRailItem) {
         let downloadID = item.remoteURL.absoluteString
 
         if localFileURL(forDownloadID: downloadID) != nil {
-            upsertRecord(VideoDownloadRecord(item: item))
+            var record = VideoDownloadRecord(item: item)
+            record.downloadedAt = records[downloadID]?.downloadedAt ?? Date()
+            upsertRecord(record)
             return
         }
 
@@ -163,6 +186,11 @@ final class VideoDownloadManager: NSObject, ObservableObject {
         record.sourceName = item.sourceName
         record.sourceDetail = item.sourceDetail
         record.lastErrorMessage = nil
+        record.isPaused = false
+        record.requestedAt = record.requestedAt ?? Date()
+        if loadResumeData(forDownloadID: downloadID) == nil {
+            record.lastKnownStatus = nil
+        }
         upsertRecord(record)
 
         guard let remoteURL = record.remoteURL, !remoteURL.isFileURL else {
@@ -188,11 +216,61 @@ final class VideoDownloadManager: NSObject, ObservableObject {
         task.resume()
     }
 
+    func pauseDownload(forRemoteURL remoteURL: URL) {
+        let downloadID = remoteURL.absoluteString
+        guard activeTasksByDownloadID[downloadID] != nil || queuedIDs.contains(downloadID) else { return }
+
+        let snapshot = activeProgress[downloadID] ?? records[downloadID]?.lastKnownStatus
+        updateRecord(downloadID: downloadID) { draft in
+            draft.isPaused = true
+            draft.lastKnownStatus = snapshot
+            draft.lastErrorMessage = nil
+        }
+
+        guard let task = activeTasksByDownloadID[downloadID] else {
+            queuedIDs.remove(downloadID)
+            activeProgress.removeValue(forKey: downloadID)
+            return
+        }
+
+        task.cancel(byProducingResumeData: { [weak self] resumeData in
+            guard let self else { return }
+            if let resumeData {
+                self.saveResumeData(resumeData, forDownloadID: downloadID)
+            }
+        })
+
+        activeTasksByDownloadID.removeValue(forKey: downloadID)
+        queuedIDs.remove(downloadID)
+        activeProgress.removeValue(forKey: downloadID)
+    }
+
+    func resumeDownload(forRemoteURL remoteURL: URL) {
+        let downloadID = remoteURL.absoluteString
+        guard let record = records[downloadID], let remoteURL = record.remoteURL, !remoteURL.isFileURL else { return }
+
+        let item = VideoRailItem(
+            id: record.id,
+            title: record.title,
+            subtitle: record.subtitle,
+            detail: record.detail,
+            url: remoteURL,
+            remoteURL: remoteURL,
+            artworkURLs: record.artworkURLs,
+            sourceKind: record.sourceKind,
+            sourceName: record.sourceName,
+            sourceDetail: record.sourceDetail
+        )
+        startDownload(for: item)
+    }
+
     private func upsertRecord(_ record: VideoDownloadRecord) {
         var normalized = record
         if let existing = records[record.id] {
             normalized.localRelativePath = normalized.localRelativePath ?? existing.localRelativePath
             normalized.downloadedAt = normalized.downloadedAt ?? existing.downloadedAt
+            normalized.requestedAt = normalized.requestedAt ?? existing.requestedAt
+            normalized.lastKnownStatus = normalized.lastKnownStatus ?? existing.lastKnownStatus
         }
         records[record.id] = normalized
         persistRecords()
@@ -247,6 +325,7 @@ final class VideoDownloadManager: NSObject, ObservableObject {
         let pendingRecords = records.values.filter { record in
             guard record.localRelativePath == nil else { return false }
             guard !attachedIDs.contains(record.id) else { return false }
+            guard !record.isPaused else { return false }
             return true
         }
 
@@ -353,6 +432,45 @@ final class VideoDownloadManager: NSObject, ObservableObject {
         let url = resumeDataURL(forDownloadID: downloadID)
         try? fileManager.removeItem(at: url)
     }
+
+    private func updateRecordInMemory(downloadID: String, _ mutate: (inout VideoDownloadRecord) -> Void) {
+        guard var record = records[downloadID] else { return }
+        mutate(&record)
+        records[downloadID] = record
+    }
+
+    private func shelfItemSort(lhs: DownloadShelfItem, rhs: DownloadShelfItem) -> Bool {
+        let lhsPriority = shelfPriority(for: lhs.state)
+        let rhsPriority = shelfPriority(for: rhs.state)
+        if lhsPriority != rhsPriority {
+            return lhsPriority < rhsPriority
+        }
+
+        let lhsDate = lhs.record.downloadedAt ?? lhs.record.requestedAt ?? .distantPast
+        let rhsDate = rhs.record.downloadedAt ?? rhs.record.requestedAt ?? .distantPast
+        if lhsDate != rhsDate {
+            return lhsDate > rhsDate
+        }
+
+        return lhs.record.title.localizedCaseInsensitiveCompare(rhs.record.title) == .orderedAscending
+    }
+
+    private func shelfPriority(for state: VideoDownloadState) -> Int {
+        switch state {
+        case .downloading(_):
+            return 0
+        case .queued(_):
+            return 1
+        case .paused(_):
+            return 2
+        case .downloaded(_):
+            return 3
+        case .failed(_):
+            return 4
+        case .notDownloaded:
+            return 5
+        }
+    }
 }
 
 extension VideoDownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelegate {
@@ -364,11 +482,17 @@ extension VideoDownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelega
         totalBytesExpectedToWrite: Int64
     ) {
         guard let downloadID = downloadID(for: downloadTask) else { return }
-        activeProgress[downloadID] = DownloadStatus(
+        let status = DownloadStatus(
             downloadedBytes: totalBytesWritten,
             expectedBytes: totalBytesExpectedToWrite
         )
+        activeProgress[downloadID] = status
         queuedIDs.insert(downloadID)
+        updateRecordInMemory(downloadID: downloadID) { draft in
+            draft.lastKnownStatus = status
+            draft.lastErrorMessage = nil
+            draft.isPaused = false
+        }
     }
 
     func urlSession(
@@ -390,6 +514,8 @@ extension VideoDownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelega
                 draft.localRelativePath = relativePath(for: finalURL)
                 draft.downloadedAt = Date()
                 draft.lastErrorMessage = nil
+                draft.lastKnownStatus = nil
+                draft.isPaused = false
             }
         } catch {
             activeTasksByDownloadID.removeValue(forKey: downloadID)
@@ -397,6 +523,7 @@ extension VideoDownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelega
             queuedIDs.remove(downloadID)
             updateRecord(downloadID: downloadID) { draft in
                 draft.lastErrorMessage = error.localizedDescription
+                draft.isPaused = false
             }
         }
     }
@@ -419,6 +546,7 @@ extension VideoDownloadManager: URLSessionDownloadDelegate, URLSessionTaskDelega
                 draft.lastErrorMessage = nil
             } else {
                 draft.lastErrorMessage = error.localizedDescription
+                draft.isPaused = false
             }
         }
     }

@@ -1,6 +1,6 @@
 import Foundation
 
-struct DownloadStatus: Equatable {
+struct DownloadStatus: Codable, Equatable {
     let downloadedBytes: Int64
     let expectedBytes: Int64
 

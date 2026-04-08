@@ -716,6 +716,8 @@ private struct PhoneCarouselCard: View {
     let title: String
     let subtitle: String
     let detail: String
+    let downloadState: VideoDownloadState?
+    let dimmedContent: Bool
     let playbackRecord: VideoPlaybackRecord?
     let actionTitle: String?
     let action: (() -> Void)?
@@ -729,6 +731,8 @@ private struct PhoneCarouselCard: View {
         title: String,
         subtitle: String,
         detail: String,
+        downloadState: VideoDownloadState? = nil,
+        dimmedContent: Bool = false,
         playbackRecord: VideoPlaybackRecord? = nil,
         actionTitle: String? = nil,
         action: (() -> Void)? = nil
@@ -737,6 +741,8 @@ private struct PhoneCarouselCard: View {
         self.title = title
         self.subtitle = subtitle
         self.detail = detail
+        self.downloadState = downloadState
+        self.dimmedContent = dimmedContent
         self.playbackRecord = playbackRecord
         self.actionTitle = actionTitle
         self.action = action
@@ -745,37 +751,44 @@ private struct PhoneCarouselCard: View {
     var body: some View {
         PhoneSurfaceCard(contentPadding: cardInset) {
             VStack(alignment: .leading, spacing: 6) {
-                RemoteArtworkView(
-                    urls: artworkURLs,
-                    aspectRatio: 1.2,
-                    cornerRadius: 15,
-                    imageAlignment: .top,
-                    imageContentMode: .fit,
-                    imagePadding: 4
-                )
-                    .frame(width: artworkWidth, height: artworkHeight)
-                    .clipped()
+                VStack(alignment: .leading, spacing: 6) {
+                    RemoteArtworkView(
+                        urls: artworkURLs,
+                        aspectRatio: 1.2,
+                        cornerRadius: 15,
+                        imageAlignment: .top,
+                        imageContentMode: .fit,
+                        imagePadding: 4
+                    )
+                        .frame(width: artworkWidth, height: artworkHeight)
+                        .clipped()
 
-                Text(title)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .lineLimit(2)
-                    .foregroundStyle(Palette.ink)
-
-                Text(subtitle)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(Palette.muted)
-                    .lineLimit(2)
-
-                if !detail.isEmpty {
-                    Text(detail)
-                        .font(.system(size: 9, weight: .regular, design: .rounded))
-                        .foregroundStyle(Palette.highlight)
+                    Text(title)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
                         .lineLimit(2)
-                }
+                        .foregroundStyle(Palette.ink)
 
-                if let playbackRecord {
-                    PlaybackProgressSummary(record: playbackRecord)
+                    Text(subtitle)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(Palette.muted)
+                        .lineLimit(2)
+
+                    if !detail.isEmpty {
+                        Text(detail)
+                            .font(.system(size: 9, weight: .regular, design: .rounded))
+                            .foregroundStyle(Palette.highlight)
+                            .lineLimit(2)
+                    }
+
+                    if let downloadState {
+                        PhoneDownloadStateSummary(state: downloadState)
+                    }
+
+                    if let playbackRecord {
+                        PlaybackProgressSummary(record: playbackRecord)
+                    }
                 }
+                .opacity(dimmedContent ? 0.62 : 1)
 
                 if let actionTitle, let action {
                     Button(actionTitle, action: action)
@@ -788,6 +801,119 @@ private struct PhoneCarouselCard: View {
             }
             .frame(width: artworkWidth, alignment: .leading)
         }
+    }
+}
+
+private struct PhoneDownloadStateSummary: View {
+    let state: VideoDownloadState
+
+    private var status: DownloadStatus? {
+        switch state {
+        case .queued(let status), .paused(let status):
+            return status
+        case .downloading(let status):
+            return status
+        case .downloaded, .failed, .notDownloaded:
+            return nil
+        }
+    }
+
+    private var title: String {
+        switch state {
+        case .queued(_):
+            return "Queued"
+        case .downloading(_):
+            return "Downloading"
+        case .paused(_):
+            return "Paused"
+        case .downloaded(_):
+            return "Offline"
+        case .failed(_):
+            return "Failed"
+        case .notDownloaded:
+            return "Not downloaded"
+        }
+    }
+
+    private var detailText: String {
+        if let status {
+            return status.detailText
+        }
+
+        switch state {
+        case .queued(_):
+            return "Waiting for network transfer"
+        case .paused(_):
+            return "Ready to continue"
+        case .failed(let message):
+            return message
+        case .downloaded(_):
+            return "Available offline"
+        case .downloading(_), .notDownloaded:
+            return ""
+        }
+    }
+
+    private var tint: Color {
+        switch state {
+        case .paused(_):
+            return Palette.gold
+        case .failed(_):
+            return Palette.danger
+        case .queued(_), .downloading(_), .downloaded(_), .notDownloaded:
+            return Palette.accent
+        }
+    }
+
+    private var progressFraction: Double? {
+        status?.fractionCompleted
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .foregroundStyle(tint)
+
+                Spacer(minLength: 0)
+
+                if let status {
+                    Text(status.detailText)
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .foregroundStyle(Palette.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+            }
+
+            if status == nil, !detailText.isEmpty {
+                Text(detailText)
+                    .font(.system(size: 8, weight: .medium, design: .rounded))
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(2)
+            }
+
+            if let progressFraction {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule(style: .continuous)
+                            .fill(Palette.accentSoft.opacity(0.9))
+
+                        Capsule(style: .continuous)
+                            .fill(tint)
+                            .frame(width: max(proxy.size.width * progressFraction, progressFraction > 0 ? 10 : 0))
+                    }
+                }
+                .frame(height: 5)
+            } else if case .queued(_) = state {
+                ProgressView()
+                    .tint(Palette.accent)
+                    .scaleEffect(0.75, anchor: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -987,7 +1113,7 @@ private struct PhoneDashboardScreen: View {
                 title: "Downloaded Content",
                 subtitle: "Videos saved on this device for offline playback."
             ) {
-                if downloadedItems.isEmpty {
+                if downloadedShelfItems.isEmpty {
                     PhoneEmptyState(
                         title: "No downloads yet",
                         message: "Saved videos and set entries will appear here once downloaded.",
@@ -996,26 +1122,39 @@ private struct PhoneDashboardScreen: View {
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
-                            ForEach(downloadedItems, id: \.id) { item in
-                                Button {
-                                    appState.playDownloadedVideo(
-                                        item,
-                                        context: downloadedItems,
-                                        railTitle: "Downloaded content",
-                                        railSubtitle: "Available offline"
-                                    )
-                                } label: {
+                            ForEach(downloadedShelfItems, id: \.id) { item in
+                                if let downloadedItem = item.downloadedItem {
+                                    Button {
+                                        appState.playDownloadedVideo(
+                                            downloadedItem,
+                                            context: playableDownloadedItems,
+                                            railTitle: "Downloaded content",
+                                            railSubtitle: "Available offline"
+                                        )
+                                    } label: {
+                                        PhoneCarouselCard(
+                                            artworkURLs: downloadedItem.record.artworkURLs,
+                                            title: downloadedItem.record.title,
+                                            subtitle: downloadedItem.record.sourceName,
+                                            detail: downloadedItem.record.sourceKind == .set ? "Video Set • Offline" : "Library Video • Offline",
+                                            playbackRecord: phonePlaybackRecord(for: downloadedItem, using: videoPlaybackStore),
+                                            actionTitle: nil,
+                                            action: nil
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
                                     PhoneCarouselCard(
                                         artworkURLs: item.record.artworkURLs,
                                         title: item.record.title,
                                         subtitle: item.record.sourceName,
-                                        detail: item.record.sourceKind == .set ? "Video Set • Offline" : "Library Video • Offline",
-                                        playbackRecord: phonePlaybackRecord(for: item, using: videoPlaybackStore),
-                                        actionTitle: "Play Offline",
-                                        action: nil
+                                        detail: item.sourceDescriptor,
+                                        downloadState: item.state,
+                                        dimmedContent: true,
+                                        actionTitle: downloadShelfActionTitle(for: item.state),
+                                        action: downloadShelfAction(for: item)
                                     )
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -1110,8 +1249,12 @@ private struct PhoneDashboardScreen: View {
         ]
     }
 
-    private var downloadedItems: [DownloadedVideoItem] {
-        Array(videoDownloadManager.downloadedItems().prefix(10))
+    private var downloadedShelfItems: [DownloadShelfItem] {
+        Array(videoDownloadManager.downloadShelfItems().prefix(10))
+    }
+
+    private var playableDownloadedItems: [DownloadedVideoItem] {
+        downloadedShelfItems.compactMap(\.downloadedItem)
     }
 
     private func phoneCarouselSection<Content: View>(
@@ -1122,6 +1265,34 @@ private struct PhoneDashboardScreen: View {
         VStack(alignment: .leading, spacing: 10) {
             PhoneSectionHeader(title: title, subtitle: subtitle)
             content()
+        }
+    }
+
+    private func downloadShelfActionTitle(for state: VideoDownloadState) -> String? {
+        switch state {
+        case .queued(_), .downloading(_):
+            return "Pause"
+        case .paused(_):
+            return "Resume"
+        case .downloaded(_), .failed(_), .notDownloaded:
+            return nil
+        }
+    }
+
+    private func downloadShelfAction(for item: DownloadShelfItem) -> (() -> Void)? {
+        guard let remoteURL = item.record.remoteURL else { return nil }
+
+        switch item.state {
+        case .queued(_), .downloading(_):
+            return {
+                videoDownloadManager.pauseDownload(forRemoteURL: remoteURL)
+            }
+        case .paused(_):
+            return {
+                videoDownloadManager.resumeDownload(forRemoteURL: remoteURL)
+            }
+        case .downloaded(_), .failed(_), .notDownloaded:
+            return nil
         }
     }
 }

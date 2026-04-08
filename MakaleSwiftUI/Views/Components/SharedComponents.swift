@@ -1279,27 +1279,34 @@ struct VideoPlayerScreen: View {
         switch currentDownloadState {
         case .notDownloaded:
             return "Download"
-        case .queued:
-            return "Queued"
+        case .queued(let status):
+            if let fraction = status?.fractionCompleted {
+                return "Pause \(Int((fraction * 100).rounded()))%"
+            }
+            return "Pause"
         case .downloading(let status):
             if let fraction = status.fractionCompleted {
-                return "\(Int((fraction * 100).rounded()))%"
+                return "Pause \(Int((fraction * 100).rounded()))%"
             }
-            return "Downloading"
-        case .downloaded:
+            return "Pause"
+        case .paused(_):
+            return "Resume"
+        case .downloaded(_):
             return "Offline"
-        case .failed:
+        case .failed(_):
             return "Retry"
         }
     }
 
     private var downloadButtonSymbol: String {
         switch currentDownloadState {
-        case .downloaded:
+        case .downloaded(_):
             return "checkmark.circle.fill"
-        case .queued, .downloading:
-            return "arrow.down.circle"
-        case .failed:
+        case .paused(_):
+            return "play.circle"
+        case .queued(_), .downloading(_):
+            return "pause.circle"
+        case .failed(_):
             return "arrow.clockwise.circle"
         case .notDownloaded:
             return "arrow.down.circle"
@@ -1308,9 +1315,9 @@ struct VideoPlayerScreen: View {
 
     private var isDownloadActionDisabled: Bool {
         switch currentDownloadState {
-        case .queued, .downloading, .downloaded:
+        case .downloaded(_):
             return true
-        case .notDownloaded, .failed:
+        case .notDownloaded, .queued(_), .downloading(_), .paused(_), .failed(_):
             return false
         }
     }
@@ -1318,11 +1325,13 @@ struct VideoPlayerScreen: View {
 #if os(iOS)
     private var downloadButtonBackgroundColor: Color {
         switch currentDownloadState {
-        case .downloaded:
+        case .downloaded(_):
             return Palette.accent.opacity(0.24)
-        case .queued, .downloading:
+        case .paused(_):
+            return Palette.gold.opacity(0.20)
+        case .queued(_), .downloading(_):
             return Color.white.opacity(0.08)
-        case .failed:
+        case .failed(_):
             return Palette.danger.opacity(0.22)
         case .notDownloaded:
             return Color.white.opacity(0.10)
@@ -1331,11 +1340,13 @@ struct VideoPlayerScreen: View {
 
     private var downloadButtonBorderColor: Color {
         switch currentDownloadState {
-        case .downloaded:
+        case .downloaded(_):
             return Palette.accent.opacity(0.36)
-        case .queued, .downloading:
+        case .paused(_):
+            return Palette.gold.opacity(0.34)
+        case .queued(_), .downloading(_):
             return Color.white.opacity(0.12)
-        case .failed:
+        case .failed(_):
             return Palette.danger.opacity(0.34)
         case .notDownloaded:
             return Color.white.opacity(0.12)
@@ -1344,8 +1355,10 @@ struct VideoPlayerScreen: View {
 
     private var downloadButtonForegroundStyle: Color {
         switch currentDownloadState {
-        case .failed:
+        case .failed(_):
             return Palette.danger
+        case .paused(_):
+            return Palette.gold
         default:
             return Color.white
         }
@@ -1467,7 +1480,16 @@ struct VideoPlayerScreen: View {
 
     private func performDownloadAction() {
         guard !isDownloadActionDisabled else { return }
-        videoDownloadManager.startDownload(for: currentItem)
+        switch currentDownloadState {
+        case .queued(_), .downloading(_):
+            videoDownloadManager.pauseDownload(forRemoteURL: currentItem.remoteURL)
+        case .paused(_):
+            videoDownloadManager.resumeDownload(forRemoteURL: currentItem.remoteURL)
+        case .notDownloaded, .failed(_):
+            videoDownloadManager.startDownload(for: currentItem)
+        case .downloaded(_):
+            break
+        }
     }
 }
 

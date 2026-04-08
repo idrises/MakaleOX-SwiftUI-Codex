@@ -573,6 +573,9 @@ struct VideoDownloadRecord: Identifiable, Codable, Equatable {
     var localRelativePath: String?
     var downloadedAt: Date?
     var lastErrorMessage: String?
+    var requestedAt: Date?
+    var lastKnownStatus: DownloadStatus?
+    var isPaused: Bool
 
     var remoteURL: URL? {
         URL(string: remoteURLString)
@@ -580,6 +583,24 @@ struct VideoDownloadRecord: Identifiable, Codable, Equatable {
 
     var artworkURLs: [URL] {
         artworkURLStrings.compactMap(URL.init(string:))
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case subtitle
+        case detail
+        case remoteURLString
+        case artworkURLStrings
+        case sourceKind
+        case sourceName
+        case sourceDetail
+        case localRelativePath
+        case downloadedAt
+        case lastErrorMessage
+        case requestedAt
+        case lastKnownStatus
+        case isPaused
     }
 
     init(item: VideoRailItem) {
@@ -595,6 +616,28 @@ struct VideoDownloadRecord: Identifiable, Codable, Equatable {
         self.localRelativePath = nil
         self.downloadedAt = nil
         self.lastErrorMessage = nil
+        self.requestedAt = Date()
+        self.lastKnownStatus = nil
+        self.isPaused = false
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        subtitle = try container.decode(String.self, forKey: .subtitle)
+        detail = try container.decode(String.self, forKey: .detail)
+        remoteURLString = try container.decode(String.self, forKey: .remoteURLString)
+        artworkURLStrings = try container.decode([String].self, forKey: .artworkURLStrings)
+        sourceKind = try container.decode(VideoSourceKind.self, forKey: .sourceKind)
+        sourceName = try container.decode(String.self, forKey: .sourceName)
+        sourceDetail = try container.decode(String.self, forKey: .sourceDetail)
+        localRelativePath = try container.decodeIfPresent(String.self, forKey: .localRelativePath)
+        downloadedAt = try container.decodeIfPresent(Date.self, forKey: .downloadedAt)
+        lastErrorMessage = try container.decodeIfPresent(String.self, forKey: .lastErrorMessage)
+        requestedAt = try container.decodeIfPresent(Date.self, forKey: .requestedAt)
+        lastKnownStatus = try container.decodeIfPresent(DownloadStatus.self, forKey: .lastKnownStatus)
+        isPaused = try container.decodeIfPresent(Bool.self, forKey: .isPaused) ?? false
     }
 }
 
@@ -622,10 +665,61 @@ struct DownloadedVideoItem: Identifiable, Equatable {
     var downloadedAt: Date? { record.downloadedAt }
 }
 
+struct DownloadShelfItem: Identifiable, Equatable {
+    let record: VideoDownloadRecord
+    let state: VideoDownloadState
+    let localURL: URL?
+
+    var id: String { record.id }
+
+    var downloadedItem: DownloadedVideoItem? {
+        guard let localURL else { return nil }
+        return DownloadedVideoItem(record: record, localURL: localURL)
+    }
+
+    var isPlayable: Bool {
+        downloadedItem != nil
+    }
+
+    var downloadStatus: DownloadStatus? {
+        switch state {
+        case .queued(let status), .paused(let status):
+            return status
+        case .downloading(let status):
+            return status
+        case .downloaded, .failed, .notDownloaded:
+            return nil
+        }
+    }
+
+    var statusTitle: String {
+        switch state {
+        case .downloaded(_):
+            return "Offline"
+        case .queued(_):
+            return "Queued"
+        case .downloading(_):
+            return "Downloading"
+        case .paused(_):
+            return "Paused"
+        case .failed(_):
+            return "Failed"
+        case .notDownloaded:
+            return "Not downloaded"
+        }
+    }
+
+    var sourceDescriptor: String {
+        let prefix = record.sourceKind == .set ? "Video Set" : "Library Video"
+        return "\(prefix) • \(statusTitle)"
+    }
+}
+
 enum VideoDownloadState: Equatable {
     case notDownloaded
-    case queued
+    case queued(DownloadStatus?)
     case downloading(DownloadStatus)
+    case paused(DownloadStatus?)
     case downloaded(URL)
     case failed(String)
 }
