@@ -1545,7 +1545,14 @@ final class AppState: ObservableObject {
 
     private func mergeHistoryEntries(_ serverEntries: [HistoryEntry], kind: HistoryKind?, email: String) -> [HistoryEntry] {
         let localPendingEntries = openEventStore.historyEntriesForMerge(email: email, kind: kind)
-        return (serverEntries + localPendingEntries)
+        let existingLocalEntries: [HistoryEntry]
+        if let kind {
+            existingLocalEntries = historyStore.entries.filter { $0.kind == kind }
+        } else {
+            existingLocalEntries = historyStore.entries
+        }
+
+        return (serverEntries + localPendingEntries + existingLocalEntries)
             .sorted { $0.openedAt > $1.openedAt }
     }
 
