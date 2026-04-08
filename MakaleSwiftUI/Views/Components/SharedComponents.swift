@@ -895,7 +895,8 @@ struct VideoPlayerScreen: View {
 #else
     private var iosVideoBody: some View {
         GeometryReader { proxy in
-            let topInset = max(proxy.safeAreaInsets.top, 12)
+            let horizontalPadding = horizontalSizeClass == .regular ? 26.0 : 18.0
+            let topInset = max(proxy.safeAreaInsets.top - 8, 8)
             let bottomInset = max(proxy.safeAreaInsets.bottom, 18)
 
             ZStack {
@@ -924,19 +925,26 @@ struct VideoPlayerScreen: View {
                     .offset(x: 140, y: 320)
                     .ignoresSafeArea()
 
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(spacing: 0) {
                     iosTopBar
-                    iosTitleBlock
-                    iosVideoSurface
-                    iosMetadataPanel
-                    if railItems.count > 1 {
-                        iosRelatedVideosRail
+                        .padding(.horizontal, horizontalPadding)
+                        .padding(.top, topInset)
+                        .padding(.bottom, 14)
+
+                    ScrollView(.vertical) {
+                        VStack(alignment: .leading, spacing: 18) {
+                            iosTitleBlock
+                            iosVideoSurface
+                            iosMetadataPanel
+                            if railItems.count > 1 {
+                                iosRelatedVideosRail
+                            }
+                        }
+                        .padding(.horizontal, horizontalPadding)
+                        .padding(.bottom, bottomInset + 24)
                     }
-                    Spacer(minLength: 0)
+                    .scrollIndicators(.hidden)
                 }
-                .padding(.horizontal, horizontalSizeClass == .regular ? 26 : 18)
-                .padding(.top, topInset + 6)
-                .padding(.bottom, bottomInset)
             }
         }
     }
