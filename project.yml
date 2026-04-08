@@ -66,14 +66,13 @@ targets:
       - sdk: PDFKit.framework
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.codex.MakaleSwiftUI.iOS-2
+        PRODUCT_BUNDLE_IDENTIFIER: com.codex.MakaleSwiftUI.iOS
         PRODUCT_NAME: MedLibKlinik
         APP_DISPLAY_NAME: MedLib
         APP_BRAND_TITLE: MedLib Clinic
-        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: T76DN37KU3
         CODE_SIGN_IDENTITY: Apple Development
-        PROVISIONING_PROFILE_SPECIFIER: MedLib Clinic
         INFOPLIST_FILE: MakaleSwiftUI/Resources/Info-iOS.plist
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_OBJC_BRIDGING_HEADER: MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h

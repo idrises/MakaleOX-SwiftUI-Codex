@@ -403,7 +403,7 @@
 				TargetAttributes = {
 					055F5E20557DE702A1884F78 = {
 						DevelopmentTeam = T76DN37KU3;
-						ProvisioningStyle = Manual;
+						ProvisioningStyle = Automatic;
 					};
 					F4F651E4093A6E7973C6C18D = {
 						DevelopmentTeam = T76DN37KU3;
@@ -636,7 +636,7 @@
 				APP_DISPLAY_NAME = MedLib;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = T76DN37KU3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -657,9 +657,8 @@
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-iossim-arm64-repacked.a",
 					"-liconv",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.codex.MakaleSwiftUI.iOS-2";
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.MakaleSwiftUI.iOS;
 				PRODUCT_NAME = MedLibKlinik;
-				PROVISIONING_PROFILE_SPECIFIER = "MedLib Clinic";
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -778,7 +777,7 @@
 				APP_DISPLAY_NAME = MedLib;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = T76DN37KU3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -799,9 +798,8 @@
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-iossim-arm64-repacked.a",
 					"-liconv",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.codex.MakaleSwiftUI.iOS-2";
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.MakaleSwiftUI.iOS;
 				PRODUCT_NAME = MedLibKlinik;
-				PROVISIONING_PROFILE_SPECIFIER = "MedLib Clinic";
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";
