@@ -1086,7 +1086,43 @@ private struct PhoneDashboardScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             phoneCarouselSection(
-                title: "Recent Issues",
+                title: "Activities",
+                subtitle: "Your last 50 opened items in one place."
+            ) {
+                if activityEntries.isEmpty {
+                    PhoneEmptyState(
+                        title: "No activity yet",
+                        message: "Articles, chapters, videos, and sets you open will appear here.",
+                        symbol: "clock.arrow.circlepath"
+                    )
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(activityEntries, id: \.id) { entry in
+                                Button {
+                                    Task {
+                                        await appState.reopenHistoryEntry(entry, historyContext: activityEntries)
+                                    }
+                                } label: {
+                                    PhoneCarouselCard(
+                                        artworkURLs: activityArtworkURLs(for: entry),
+                                        title: entry.title,
+                                        subtitle: entry.subtitle,
+                                        detail: activityDetail(for: entry),
+                                        playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore),
+                                        actionTitle: nil,
+                                        action: nil
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+
+            phoneCarouselSection(
+                title: "New Issues",
                 subtitle: "Latest journal issues ready to open."
             ) {
                 if appState.dashboard.recentIssues.isEmpty {
@@ -1262,8 +1298,25 @@ private struct PhoneDashboardScreen: View {
         Array(videoDownloadManager.downloadShelfItems().prefix(10))
     }
 
+    private var activityEntries: [HistoryEntry] {
+        Array(appState.historyStore.entries.prefix(50))
+    }
+
     private var playableDownloadedItems: [DownloadedVideoItem] {
         downloadedShelfItems.compactMap(\.downloadedItem)
+    }
+
+    private func activityArtworkURLs(for entry: HistoryEntry) -> [URL] {
+        guard !entry.coverURLString.isEmpty, let coverURL = URL(string: entry.coverURLString) else {
+            return []
+        }
+        return [coverURL]
+    }
+
+    private func activityDetail(for entry: HistoryEntry) -> String {
+        [entry.kind.title, entry.detail]
+            .filter { !$0.isEmpty }
+            .joined(separator: " • ")
     }
 
     private func phoneCarouselSection<Content: View>(
