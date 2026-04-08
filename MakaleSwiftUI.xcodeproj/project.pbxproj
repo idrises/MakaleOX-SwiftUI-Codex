@@ -113,7 +113,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MakaleSwiftUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		002B1E85F227F42F0941CA52 /* MedLib.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MedLib.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		02F23844E11B72C7DE6A53E8 /* DashboardScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardScreen.swift; sourceTree = "<group>"; };
 		047C767E58959ACBC530802D /* cstypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cstypes.h; sourceTree = "<group>"; };
 		0884B4DAAA7E60F85D3A8B6A /* ProfileScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreen.swift; sourceTree = "<group>"; };
@@ -130,7 +130,7 @@
 		1D9BE7DC22D04C97F861E4D4 /* VideoPlaybackStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlaybackStore.swift; sourceTree = "<group>"; };
 		1DC8017C9CAD0CB67EFA05A5 /* sybfront.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sybfront.h; sourceTree = "<group>"; };
 		22AC7F46DD573E52C0E707B0 /* ctpublic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ctpublic.h; sourceTree = "<group>"; };
-		2D17DA8E87E6D41E3FD9BAF3 /* MakaleSwiftUI-iOS-2.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "MakaleSwiftUI-iOS-2.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2D17DA8E87E6D41E3FD9BAF3 /* MakaleSwiftUI-iOS-2.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; name = "MakaleSwiftUI-iOS-2.app"; path = MedLibAkademi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D20BE3C222ED2107886EBCB /* MainShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainShellView.swift; sourceTree = "<group>"; };
 		32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLGateway.swift; sourceTree = "<group>"; };
 		366A6488F1212CE5289889CB /* JournalsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsScreen.swift; sourceTree = "<group>"; };
@@ -149,7 +149,7 @@
 		783655A2274AAEB98228996D /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
 		7B121AF93C4684C5A72013A9 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchScreen.swift; sourceTree = "<group>"; };
-		8F4346012E626E71EA746DA9 /* MakaleSwiftUI-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "MakaleSwiftUI-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F4346012E626E71EA746DA9 /* MakaleSwiftUI-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; name = "MakaleSwiftUI-iOS.app"; path = MedLibKlinik.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyConfig.swift; sourceTree = "<group>"; };
 		91748B548B2A2034DABDA121 /* SQLClient.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SQLClient.m; sourceTree = "<group>"; };
 		AA233BF698152BF3507B7C1C /* HistoryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryScreen.swift; sourceTree = "<group>"; };
@@ -347,7 +347,7 @@
 			children = (
 				2D17DA8E87E6D41E3FD9BAF3 /* MakaleSwiftUI-iOS-2.app */,
 				8F4346012E626E71EA746DA9 /* MakaleSwiftUI-iOS.app */,
-				002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */,
+				002B1E85F227F42F0941CA52 /* MedLib.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -390,7 +390,7 @@
 			packageProductDependencies = (
 			);
 			productName = MakaleSwiftUI;
-			productReference = 002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */;
+			productReference = 002B1E85F227F42F0941CA52 /* MedLib.app */;
 			productType = "com.apple.product-type.application";
 		};
 		F4F651E4093A6E7973C6C18D /* MakaleSwiftUI-iOS-2 */ = {
@@ -716,7 +716,7 @@
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 13;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-arm64-repacked.a",
@@ -858,7 +858,7 @@
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 13;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-arm64-repacked.a",
