@@ -66,34 +66,49 @@ struct MainShellView: View {
         }
         .toolbar {
             #if os(iOS)
-            if shouldShowSplitHeaderMenu {
-                ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Button {
-                            splitViewVisibility = .all
-                        } label: {
-                            Label("Show Sidebar", systemImage: "sidebar.leading")
-                        }
-
-                        Divider()
-
-                        ForEach(AppSection.allCases) { section in
+            if usesVisibleIPadToolbar {
+                if shouldShowSplitHeaderMenu {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Menu {
                             Button {
-                                appState.selectedSection = section
+                                splitViewVisibility = .all
                             } label: {
-                                Label(section.title, systemImage: appState.selectedSection == section ? "checkmark.circle.fill" : section.symbolName)
+                                Label("Show Sidebar", systemImage: "sidebar.leading")
                             }
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: appState.selectedSection.symbolName)
-                            Text(appState.selectedSection.title)
-                                .lineLimit(1)
+
+                            Divider()
+
+                            ForEach(AppSection.allCases) { section in
+                                Button {
+                                    appState.selectedSection = section
+                                } label: {
+                                    Label(section.title, systemImage: appState.selectedSection == section ? "checkmark.circle.fill" : section.symbolName)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: appState.selectedSection.symbolName)
+                                Text(appState.selectedSection.title)
+                                    .lineLimit(1)
+                            }
                         }
                     }
                 }
+                ToolbarItemGroup(placement: .automatic) {
+                    Button {
+                        Task { await appState.refreshCurrentSection() }
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+
+                    Button(role: .destructive) {
+                        appState.logout()
+                    } label: {
+                        Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                }
             }
-            #endif
+            #else
             ToolbarItemGroup(placement: .automatic) {
                 Button {
                     Task { await appState.refreshCurrentSection() }
@@ -107,7 +122,11 @@ struct MainShellView: View {
                     Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
                 }
             }
+            #endif
         }
+        #if os(iOS)
+        .toolbar(usesVisibleIPadToolbar ? .visible : .hidden, for: .navigationBar)
+        #endif
         .task(id: appState.selectedSection) {
             await appState.loadCurrentSectionIfNeeded()
         }
@@ -357,7 +376,7 @@ struct MainShellView: View {
 
     private var detailTopPadding: CGFloat {
 #if os(iOS)
-        return isRegularIPadLayout ? 8 : 10
+        return isRegularIPadLayout ? 2 : 10
 #else
         return 10
 #endif
@@ -401,6 +420,10 @@ struct MainShellView: View {
 
     private var shouldShowSplitHeaderMenu: Bool {
         isRegularIPadLayout && splitViewVisibility == .detailOnly
+    }
+
+    private var usesVisibleIPadToolbar: Bool {
+        !isRegularIPadLayout || shouldShowSplitHeaderMenu
     }
 
     private var isCompactPhoneLayout: Bool {
