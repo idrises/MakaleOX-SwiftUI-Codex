@@ -653,7 +653,7 @@ final class LegacyRepository {
                     ?? LegacyConfig.coverCandidates(for: journal).first?.absoluteString
                     ?? "",
                 reference: .article(journal: journal, folder: folder, pdfLink: pdfLink),
-                openedAt: LegacyDate.serverDate(from: row.string("openedAtText")) ?? Date()
+                openedAt: LegacyDate.serverDate(from: row.string("openedAtText")) ?? .distantPast
             )
         }
 
@@ -673,7 +673,7 @@ final class LegacyRepository {
                 urlString: "",
                 coverURLString: LegacyConfig.bookCoverCandidates(isbn: isbn).first?.absoluteString ?? "",
                 reference: .chapter(isbn: isbn, pdfLink: pdfLink),
-                openedAt: LegacyDate.serverDate(from: row.string("openedAtText")) ?? Date()
+                openedAt: LegacyDate.serverDate(from: row.string("openedAtText")) ?? .distantPast
             )
         }
 
@@ -693,7 +693,7 @@ final class LegacyRepository {
                 urlString: remoteURL.absoluteString,
                 coverURLString: LegacyConfig.videoCoverCandidates(name: row.string("imageLink")).first?.absoluteString ?? "",
                 reference: .video(bookJournal: bookJournal, link: remoteLink),
-                openedAt: LegacyDate.serverDate(from: row.string("openedAtText")) ?? Date()
+                openedAt: LegacyDate.serverDate(from: row.string("openedAtText")) ?? .distantPast
             )
         }
 
@@ -714,7 +714,7 @@ final class LegacyRepository {
                 urlString: remoteURL.absoluteString,
                 coverURLString: LegacyConfig.videoCoverCandidates(name: imageName).first?.absoluteString ?? "",
                 reference: .videoSet(setName: setName, link: remoteLink),
-                openedAt: LegacyDate.serverDate(from: row.string("openedAtText")) ?? Date()
+                openedAt: LegacyDate.serverDate(from: row.string("openedAtText")) ?? .distantPast
             )
         }
 

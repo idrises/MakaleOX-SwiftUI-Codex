@@ -915,14 +915,16 @@ enum LegacyDate {
     static func serverDate(from value: String) -> Date? {
         guard !value.isEmpty else { return nil }
 
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = isoFormatter.date(from: value) {
+        if let date = isoFormatter.date(from: trimmedValue) {
             return date
         }
 
         isoFormatter.formatOptions = [.withInternetDateTime]
-        if let date = isoFormatter.date(from: value) {
+        if let date = isoFormatter.date(from: trimmedValue) {
             return date
         }
 
@@ -930,20 +932,42 @@ enum LegacyDate {
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
 
+        let normalizedValue = normalizeServerTimestamp(trimmedValue)
         let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS",
+            "yyyy-MM-dd HH:mm:ss.SSSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd HH:mm:ss.SSSSSS",
             "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd HH:mm:ss.SSS",
             "yyyy-MM-dd'T'HH:mm:ss",
             "yyyy-MM-dd HH:mm:ss"
         ]
 
         for format in formats {
             formatter.dateFormat = format
-            if let date = formatter.date(from: value) {
+            if let date = formatter.date(from: normalizedValue) {
                 return date
             }
         }
 
         return nil
+    }
+
+    private static func normalizeServerTimestamp(_ value: String) -> String {
+        guard let fractionalRange = value.range(of: #"([T\s]\d{2}:\d{2}:\d{2})\.(\d+)"#, options: .regularExpression) else {
+            return value
+        }
+
+        let matched = String(value[fractionalRange])
+        guard let dotIndex = matched.firstIndex(of: ".") else {
+            return value
+        }
+
+        let prefix = String(matched[..<dotIndex])
+        let fraction = String(matched[matched.index(after: dotIndex)...])
+        let trimmedFraction = String(fraction.prefix(7))
+        return value.replacingOccurrences(of: matched, with: "\(prefix).\(trimmedFraction)")
     }
 
     static func flexibleDate(from value: String) -> Date? {
