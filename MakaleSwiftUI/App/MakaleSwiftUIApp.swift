@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct MakaleSwiftUIApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appState = AppState()
     @StateObject private var videoDownloadManager = VideoDownloadManager.shared
     @StateObject private var videoPlaybackStore = VideoPlaybackStore.shared
@@ -26,6 +27,10 @@ struct MakaleSwiftUIApp: App {
             .task {
                 await appState.bootstrap()
                 videoDownloadManager.restorePendingTasksIfNeeded()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                appState.handleAppDidBecomeActive()
             }
             .alert(item: $appState.activeAlert) { alert in
                 Alert(

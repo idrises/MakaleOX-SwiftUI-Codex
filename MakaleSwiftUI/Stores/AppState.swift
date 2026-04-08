@@ -227,7 +227,6 @@ final class AppState: ObservableObject {
     func refreshHistory(kind: HistoryKind? = nil) async {
         guard let session else { return }
         isRefreshingHistory = true
-        syncPendingOpenEventsInBackground()
 
         do {
             let entries = try await self.repository.fetchHistory(email: session.email, kind: kind)
@@ -1351,6 +1350,10 @@ final class AppState: ObservableObject {
         openEventStore.clear()
         resetRemoteContent()
         selectedSection = .dashboard
+    }
+
+    func handleAppDidBecomeActive() {
+        syncPendingOpenEventsInBackground()
     }
 
     private func loadEverything() async throws {
