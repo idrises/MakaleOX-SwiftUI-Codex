@@ -295,6 +295,24 @@ final class LegacyRepository {
         return rows.map(Video.init)
     }
 
+    func fetchVideos(bookJournal: String, subject: String) async throws -> [Video] {
+        let sourceName = bookJournal.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sourceName.isEmpty else { return [] }
+
+        let subjectFilter = subjectPredicate(subject)
+        let rows = try await gateway.query(
+            """
+            SELECT TOP 120 *
+            FROM videos
+            WHERE bookJournal = ? AND (\(subjectFilter.sql))
+            ORDER BY createDate DESC
+            """,
+            parameters: [sourceName] + subjectFilter.parameters,
+            timeout: 90
+        )
+        return rows.map(Video.init)
+    }
+
     func fetchVideoSets(subject: String, search: String = "") async throws -> [VideoSet] {
         let predicate = subjectPredicate(subject)
         var query = "SELECT TOP 120 * FROM newVideoSet WHERE \(predicate.sql)"

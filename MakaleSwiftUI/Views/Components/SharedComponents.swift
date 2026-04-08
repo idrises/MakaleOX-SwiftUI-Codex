@@ -802,7 +802,10 @@ struct VideoPlayerScreen: View {
     let backLabel: String
     let onClose: () -> Void
     @State private var player: AVPlayer
+    @State private var currentItem: VideoRailItem
 #if os(iOS)
+    @State private var focusedRailItemID: String?
+    @State private var selectionCommitTask: Task<Void, Never>?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 #endif
 
@@ -811,6 +814,10 @@ struct VideoPlayerScreen: View {
         self.backLabel = backLabel
         self.onClose = onClose
         _player = State(initialValue: AVPlayer(url: video.url))
+        _currentItem = State(initialValue: video.currentItem)
+#if os(iOS)
+        _focusedRailItemID = State(initialValue: video.currentItem.id)
+#endif
     }
 
     var body: some View {
@@ -826,6 +833,9 @@ struct VideoPlayerScreen: View {
         }
         .onDisappear {
             player.pause()
+#if os(iOS)
+            selectionCommitTask?.cancel()
+#endif
         }
     }
 
@@ -844,7 +854,7 @@ struct VideoPlayerScreen: View {
 
             ScreenHeader(
                 eyebrow: "Video",
-                title: video.title,
+                title: currentItem.title,
                 subtitle: "",
                 titleSize: videoTitleSize
             )
@@ -911,6 +921,9 @@ struct VideoPlayerScreen: View {
                 iosTitleBlock
                 iosVideoSurface
                 iosMetadataPanel
+                if railItems.count > 1 {
+                    iosRelatedVideosRail
+                }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, horizontalSizeClass == .regular ? 26 : 18)
@@ -949,7 +962,7 @@ struct VideoPlayerScreen: View {
                 .tracking(1.5)
                 .foregroundStyle(Palette.highlight)
 
-            Text(video.title)
+            Text(currentItem.title)
                 .font(.system(size: horizontalSizeClass == .regular ? 21 : 17, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.white)
                 .fixedSize(horizontal: false, vertical: true)
@@ -990,10 +1003,10 @@ struct VideoPlayerScreen: View {
                 .foregroundStyle(Color.white)
 
             VideoMetaCard(
-                systemImage: video.sourceKind.systemImage,
-                title: video.sourceKind.cardTitle,
-                detail: video.sourceName,
-                caption: video.sourceDetail.isEmpty ? video.sourceKind.summaryPrefix : video.sourceDetail
+                systemImage: currentItem.sourceKind.systemImage,
+                title: currentItem.sourceKind.cardTitle,
+                detail: currentItem.sourceName,
+                caption: currentItem.sourceDetail.isEmpty ? currentItem.sourceKind.summaryPrefix : currentItem.sourceDetail
             )
         }
         .padding(18)
@@ -1006,7 +1019,83 @@ struct VideoPlayerScreen: View {
                 .stroke(Color.white.opacity(0.10), lineWidth: 1)
         )
     }
+
+    private var iosRelatedVideosRail: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(video.railTitle)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white)
+
+                if !video.railSubtitle.isEmpty {
+                    Text(video.railSubtitle)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.62))
+                }
+            }
+
+            GeometryReader { proxy in
+                let cardWidth = min(horizontalSizeClass == .regular ? 264 : 208, proxy.size.width * 0.72)
+                let horizontalInset = max((proxy.size.width - cardWidth) / 2, 0)
+
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: 14) {
+                        ForEach(railItems) { item in
+                            Button {
+                                withAnimation(.snappy(duration: 0.28)) {
+                                    focusedRailItemID = item.id
+                                }
+                            } label: {
+                                IOSVideoRailCard(
+                                    item: item,
+                                    isFocused: focusedRailItemID == item.id
+                                )
+                                .frame(width: cardWidth)
+                            }
+                            .buttonStyle(.plain)
+                            .id(item.id)
+                        }
+                    }
+                    .scrollTargetLayout()
+                    .padding(.horizontal, horizontalInset)
+                }
+                .scrollIndicators(.hidden)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $focusedRailItemID, anchor: .center)
+                .onChange(of: focusedRailItemID) { _, newValue in
+                    scheduleSettledVideoSwitch(for: newValue)
+                }
+            }
+            .frame(height: horizontalSizeClass == .regular ? 236 : 212)
+        }
+    }
 #endif
+
+    private var railItems: [VideoRailItem] {
+        video.railItems.isEmpty ? [video.currentItem] : video.railItems
+    }
+
+    private func scheduleSettledVideoSwitch(for itemID: String?) {
+#if os(iOS)
+        selectionCommitTask?.cancel()
+        guard let itemID, itemID != currentItem.id else { return }
+
+        selectionCommitTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 280_000_000)
+            guard !Task.isCancelled else { return }
+            activateRailItem(withID: itemID)
+        }
+#endif
+    }
+
+    private func activateRailItem(withID itemID: String) {
+        guard let selectedItem = railItems.first(where: { $0.id == itemID }) else { return }
+        guard selectedItem.id != currentItem.id else { return }
+
+        currentItem = selectedItem
+        player.replaceCurrentItem(with: AVPlayerItem(url: selectedItem.url))
+        player.play()
+    }
 
     private func seek(by delta: Double) {
         let currentSeconds = max(player.currentTime().seconds, 0)
@@ -1081,6 +1170,50 @@ private struct VideoMetaCard: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
+    }
+}
+
+private struct IOSVideoRailCard: View {
+    let item: VideoRailItem
+    let isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            RemoteArtworkView(
+                urls: item.artworkURLs,
+                aspectRatio: 1.28,
+                cornerRadius: 20,
+                imageAlignment: .center,
+                imageContentMode: .fill
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(item.detail.isEmpty ? item.subtitle : item.detail)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.62))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(isFocused ? Color.white.opacity(0.14) : Color.white.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(isFocused ? Palette.highlight.opacity(0.8) : Color.white.opacity(0.10), lineWidth: 1)
+        )
+        .scaleEffect(isFocused ? 1 : 0.94)
+        .shadow(color: .black.opacity(isFocused ? 0.24 : 0.10), radius: isFocused ? 18 : 10, y: isFocused ? 10 : 6)
+        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: isFocused)
     }
 }
 #endif

@@ -682,7 +682,8 @@ final class AppState: ObservableObject {
             )
         )
         activeDocument = nil
-        activeVideo = makeVideoPresentation(for: video, url: url)
+        let relatedVideos = await resolveRelatedVideos(for: video, session: session)
+        activeVideo = makeVideoPresentation(for: video, url: url, relatedVideos: relatedVideos)
     }
 
     func openVideoSetEntryFromSearch(_ entry: VideoSetEntry) async {
@@ -743,7 +744,8 @@ final class AppState: ObservableObject {
             )
         )
         activeDocument = nil
-        activeVideo = makeVideoPresentation(for: entry, url: url)
+        let relatedEntries = await resolveRelatedVideoSetEntries(for: entry)
+        activeVideo = makeVideoPresentation(for: entry, url: url, relatedEntries: relatedEntries)
     }
 
     func reopenHistoryEntry(_ entry: HistoryEntry) async {
@@ -795,7 +797,12 @@ final class AppState: ObservableObject {
         case .video, .videoSet:
             if let url = URL(string: entry.urlString), !entry.urlString.isEmpty {
                 activeDocument = nil
-                activeVideo = makeVideoPresentation(for: entry, reference: entry.reference, url: url)
+                activeVideo = await makeHistoryVideoPresentation(
+                    for: entry,
+                    reference: entry.reference,
+                    url: url,
+                    session: session
+                )
                 return
             }
 
@@ -818,36 +825,158 @@ final class AppState: ObservableObject {
 
                 self.historyStore.update(entry.updating(urlString: url.absoluteString, reference: reference))
                 self.activeDocument = nil
-                self.activeVideo = makeVideoPresentation(for: entry, reference: reference, url: url)
+                self.activeVideo = await self.makeHistoryVideoPresentation(
+                    for: entry,
+                    reference: reference,
+                    url: url,
+                    session: self.session
+                )
             }
         }
     }
 
-    private func makeVideoPresentation(for video: Video, url: URL) -> VideoPresentation {
+    private func makeVideoPresentation(for video: Video, url: URL, relatedVideos: [Video]) -> VideoPresentation {
+        let currentItem = makeVideoRailItem(for: video, url: url)
+        return makeVideoPresentation(
+            currentItem: currentItem,
+            railItems: relatedVideos.map { makeVideoRailItem(for: $0) },
+            railTitle: "More from this source",
+            railSubtitle: video.bookJournal
+        )
+    }
+
+    private func makeVideoPresentation(
+        for entry: VideoSetEntry,
+        url: URL,
+        relatedEntries: [VideoSetEntry]
+    ) -> VideoPresentation {
+        let currentItem = makeVideoRailItem(for: entry, url: url)
+        return makeVideoPresentation(
+            currentItem: currentItem,
+            railItems: relatedEntries.map { makeVideoRailItem(for: $0) },
+            railTitle: "More in this set",
+            railSubtitle: entry.setName
+        )
+    }
+
+    private func makeHistoryVideoPresentation(
+        for entry: HistoryEntry,
+        reference: HistoryReference?,
+        url: URL,
+        session: SessionInfo?
+    ) async -> VideoPresentation {
+        guard let reference else {
+            let fallbackItem = makeVideoRailItem(for: entry, reference: nil, url: url)
+            return makeVideoPresentation(
+                currentItem: fallbackItem,
+                railItems: [fallbackItem],
+                railTitle: "More videos",
+                railSubtitle: fallbackItem.sourceName
+            )
+        }
+
+        switch reference.kind {
+        case .video:
+            let relatedVideos = if let session {
+                await resolveRelatedVideos(
+                    sourceName: reference.primary,
+                    session: session,
+                    preferredVideo: nil
+                )
+            } else {
+                localRelatedVideos(sourceName: reference.primary)
+            }
+
+            if let matchedVideo = relatedVideos.first(where: { $0.remoteLink == reference.secondary }) {
+                return makeVideoPresentation(for: matchedVideo, url: url, relatedVideos: relatedVideos)
+            }
+
+            let fallbackItem = makeVideoRailItem(for: entry, reference: reference, url: url)
+            return makeVideoPresentation(
+                currentItem: fallbackItem,
+                railItems: relatedVideos.map { makeVideoRailItem(for: $0) },
+                railTitle: "More from this source",
+                railSubtitle: fallbackItem.sourceName
+            )
+        case .videoSet:
+            let relatedEntries = await resolveRelatedVideoSetEntries(
+                setName: reference.primary,
+                preferredEntry: nil
+            )
+
+            if let matchedEntry = relatedEntries.first(where: { $0.remoteLink == reference.secondary }) {
+                return makeVideoPresentation(for: matchedEntry, url: url, relatedEntries: relatedEntries)
+            }
+
+            let fallbackItem = makeVideoRailItem(for: entry, reference: reference, url: url)
+            return makeVideoPresentation(
+                currentItem: fallbackItem,
+                railItems: relatedEntries.map { makeVideoRailItem(for: $0) },
+                railTitle: "More in this set",
+                railSubtitle: fallbackItem.sourceName
+            )
+        case .article, .chapter:
+            let fallbackItem = makeVideoRailItem(for: entry, reference: reference, url: url)
+            return makeVideoPresentation(
+                currentItem: fallbackItem,
+                railItems: [fallbackItem],
+                railTitle: "More videos",
+                railSubtitle: fallbackItem.sourceName
+            )
+        }
+    }
+
+    private func makeVideoPresentation(
+        currentItem: VideoRailItem,
+        railItems: [VideoRailItem],
+        railTitle: String,
+        railSubtitle: String
+    ) -> VideoPresentation {
         VideoPresentation(
+            currentItem: currentItem,
+            railTitle: railTitle,
+            railSubtitle: railSubtitle,
+            railItems: mergeUniqueItems(
+                primary: railItems,
+                secondary: [],
+                preferredItem: currentItem
+            )
+        )
+    }
+
+    private func makeVideoRailItem(for video: Video, url: URL? = nil) -> VideoRailItem {
+        VideoRailItem(
+            id: video.id,
             title: video.title,
-            url: url,
+            subtitle: video.bookJournal,
+            detail: [video.author, video.editor].filter { !$0.isEmpty }.joined(separator: " • "),
+            url: url ?? LegacyConfig.videoRemoteURL(bookJournal: video.bookJournal, link: video.remoteLink) ?? URL(fileURLWithPath: "/"),
+            artworkURLs: LegacyConfig.videoCoverCandidates(name: video.imageLink),
             sourceKind: .library,
             sourceName: video.bookJournal,
             sourceDetail: [video.author, video.editor].filter { !$0.isEmpty }.joined(separator: " • ")
         )
     }
 
-    private func makeVideoPresentation(for entry: VideoSetEntry, url: URL) -> VideoPresentation {
-        VideoPresentation(
+    private func makeVideoRailItem(for entry: VideoSetEntry, url: URL? = nil) -> VideoRailItem {
+        VideoRailItem(
+            id: entry.id,
             title: entry.title,
-            url: url,
+            subtitle: entry.setName,
+            detail: [entry.author, entry.editor].filter { !$0.isEmpty }.joined(separator: " • "),
+            url: url ?? LegacyConfig.videoSetRemoteURL(setName: entry.setName, link: entry.remoteLink) ?? URL(fileURLWithPath: "/"),
+            artworkURLs: LegacyConfig.videoCoverCandidates(name: entry.imageLink),
             sourceKind: .set,
             sourceName: entry.setName,
             sourceDetail: [entry.author, entry.editor].filter { !$0.isEmpty }.joined(separator: " • ")
         )
     }
 
-    private func makeVideoPresentation(
+    private func makeVideoRailItem(
         for entry: HistoryEntry,
         reference: HistoryReference?,
         url: URL
-    ) -> VideoPresentation {
+    ) -> VideoRailItem {
         let kind: VideoSourceKind
         switch reference?.kind ?? entry.kind {
         case .videoSet:
@@ -863,13 +992,105 @@ final class AppState: ObservableObject {
             return candidate.isEmpty ? "Unknown source" : candidate
         }()
 
-        return VideoPresentation(
+        let artworkURLs = URL(string: entry.coverURLString).map { [$0] } ?? []
+
+        return VideoRailItem(
+            id: [sourceName, entry.title, url.absoluteString].joined(separator: "|"),
             title: entry.title,
+            subtitle: sourceName,
+            detail: entry.detail,
             url: url,
+            artworkURLs: artworkURLs,
             sourceKind: kind,
             sourceName: sourceName,
             sourceDetail: entry.detail
         )
+    }
+
+    private func resolveRelatedVideos(for video: Video, session: SessionInfo) async -> [Video] {
+        await resolveRelatedVideos(sourceName: video.bookJournal, session: session, preferredVideo: video)
+    }
+
+    private func resolveRelatedVideos(
+        sourceName: String,
+        session: SessionInfo,
+        preferredVideo: Video?
+    ) async -> [Video] {
+        let localMatches = localRelatedVideos(sourceName: sourceName)
+        if localMatches.count > 1 {
+            return mergeUniqueItems(primary: localMatches, secondary: [], preferredItem: preferredVideo)
+        }
+
+        do {
+            let fetchedVideos = try await repository.fetchVideos(bookJournal: sourceName, subject: session.subject)
+            return mergeUniqueItems(primary: fetchedVideos, secondary: localMatches, preferredItem: preferredVideo)
+        } catch {
+            return mergeUniqueItems(primary: localMatches, secondary: [], preferredItem: preferredVideo)
+        }
+    }
+
+    private func resolveRelatedVideoSetEntries(for entry: VideoSetEntry) async -> [VideoSetEntry] {
+        await resolveRelatedVideoSetEntries(setName: entry.setName, preferredEntry: entry)
+    }
+
+    private func resolveRelatedVideoSetEntries(
+        setName: String,
+        preferredEntry: VideoSetEntry?
+    ) async -> [VideoSetEntry] {
+        let localMatches = localRelatedVideoSetEntries(setName: setName)
+        if localMatches.count > 1 {
+            return mergeUniqueItems(primary: localMatches, secondary: [], preferredItem: preferredEntry)
+        }
+
+        do {
+            let fetchedEntries = try await repository.fetchVideoSetEntries(setName: setName)
+            return mergeUniqueItems(primary: fetchedEntries, secondary: localMatches, preferredItem: preferredEntry)
+        } catch {
+            return mergeUniqueItems(primary: localMatches, secondary: [], preferredItem: preferredEntry)
+        }
+    }
+
+    private func localRelatedVideos(sourceName: String) -> [Video] {
+        let normalizedSourceName = sourceName.normalizedSearchKey()
+        let combinedVideos = videos + searchResults.videos
+
+        return mergeUniqueItems(
+            primary: combinedVideos.filter { $0.bookJournal.normalizedSearchKey() == normalizedSourceName },
+            secondary: [],
+            preferredItem: nil as Video?
+        )
+    }
+
+    private func localRelatedVideoSetEntries(setName: String) -> [VideoSetEntry] {
+        let normalizedSetName = setName.normalizedSearchKey()
+        let combinedEntries = videoSetEntries + searchResults.videoSetEntries
+
+        return mergeUniqueItems(
+            primary: combinedEntries.filter { $0.setName.normalizedSearchKey() == normalizedSetName },
+            secondary: [],
+            preferredItem: nil as VideoSetEntry?
+        )
+    }
+
+    private func mergeUniqueItems<Item: Identifiable>(
+        primary: [Item],
+        secondary: [Item],
+        preferredItem: Item?
+    ) -> [Item] where Item.ID: Hashable {
+        var seenIDs = Set<Item.ID>()
+        var merged: [Item] = []
+
+        for item in primary + secondary {
+            if seenIDs.insert(item.id).inserted {
+                merged.append(item)
+            }
+        }
+
+        if let preferredItem, seenIDs.insert(preferredItem.id).inserted {
+            merged.insert(preferredItem, at: 0)
+        }
+
+        return merged
     }
 
     func logout() {

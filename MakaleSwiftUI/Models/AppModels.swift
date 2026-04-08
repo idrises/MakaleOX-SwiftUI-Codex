@@ -541,13 +541,30 @@ enum VideoSourceKind: String, Equatable {
     }
 }
 
-struct VideoPresentation: Identifiable, Equatable {
-    let id = UUID()
+struct VideoRailItem: Identifiable, Equatable {
+    let id: String
     let title: String
+    let subtitle: String
+    let detail: String
     let url: URL
+    let artworkURLs: [URL]
     let sourceKind: VideoSourceKind
     let sourceName: String
     let sourceDetail: String
+}
+
+struct VideoPresentation: Identifiable, Equatable {
+    let id = UUID()
+    let currentItem: VideoRailItem
+    let railTitle: String
+    let railSubtitle: String
+    let railItems: [VideoRailItem]
+
+    var title: String { currentItem.title }
+    var url: URL { currentItem.url }
+    var sourceKind: VideoSourceKind { currentItem.sourceKind }
+    var sourceName: String { currentItem.sourceName }
+    var sourceDetail: String { currentItem.sourceDetail }
 }
 
 struct AppAlert: Identifiable, Equatable {
