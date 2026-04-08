@@ -23,6 +23,7 @@
 		1856AFA408CECB43DD825DD6 /* libfreetds-arm64-repacked.a in Resources */ = {isa = PBXBuildFile; fileRef = 5582D0637F69FD5F520ECE2D /* libfreetds-arm64-repacked.a */; };
 		191334C905ECCB268DF29B8D /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B121AF93C4684C5A72013A9 /* SharedComponents.swift */; };
 		1B4B14825EED19673C5F81B0 /* HistoryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA233BF698152BF3507B7C1C /* HistoryScreen.swift */; };
+		1D79C2113DC31AC793A35657 /* AppBranding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F721052652E162B3148FCAF /* AppBranding.swift */; };
 		1DC237146F5E0081746D24F0 /* MainShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D20BE3C222ED2107886EBCB /* MainShellView.swift */; };
 		1EC928EA2CA1F5F7B89F398B /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0CD71DA73E0A4F89EE1F56 /* HistoryStore.swift */; };
 		1F1B8B0D8BD6ECB7368A59B9 /* SQLGateway.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */; };
@@ -34,6 +35,7 @@
 		2C96D98B5E966D1AC54B0736 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D90B78D1861F0144CEA428E3 /* AppState.swift */; };
 		301EA72A4ADDF9AD6AD3A47E /* SearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */; };
 		306668E772B5B482E7CEA861 /* libfreetds.a in Resources */ = {isa = PBXBuildFile; fileRef = AFCEE461B743FD7E480EB5CA /* libfreetds.a */; };
+		310DF3EB1D72F2BA40C5D52B /* AppBranding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F721052652E162B3148FCAF /* AppBranding.swift */; };
 		395D84FA3AF0EFF75BF2BAA1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D90B78D1861F0144CEA428E3 /* AppState.swift */; };
 		3D8334CD9694A28853FBF55B /* JournalsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366A6488F1212CE5289889CB /* JournalsScreen.swift */; };
 		3DE464D053290458B56FD34C /* libfreetds-iossim-arm64-repacked.a in Resources */ = {isa = PBXBuildFile; fileRef = E79FAE8FE0D443548CB7247F /* libfreetds-iossim-arm64-repacked.a */; };
@@ -94,16 +96,18 @@
 		F49A0624406F1C638DB78FEF /* libfreetds-prebuilt-x86_64-legacy.a in Resources */ = {isa = PBXBuildFile; fileRef = 17A2B8024F62FCAB189B5E12 /* libfreetds-prebuilt-x86_64-legacy.a */; };
 		F63488528E718C40A9F2DDC1 /* ProfileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0884B4DAAA7E60F85D3A8B6A /* ProfileScreen.swift */; };
 		F89BAE2D7A21EDDF0DD6F0A8 /* DashboardScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F23844E11B72C7DE6A53E8 /* DashboardScreen.swift */; };
+		FDC2BAB667FB32B91245DD86 /* AppBranding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F721052652E162B3148FCAF /* AppBranding.swift */; };
 		FF43A63B9EF944D76ACB5813 /* IPhoneExperience.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37C80F937AB517ABA415566 /* IPhoneExperience.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = MakaleSwiftUI.app; path = MedLib.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MakaleSwiftUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		02F23844E11B72C7DE6A53E8 /* DashboardScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardScreen.swift; sourceTree = "<group>"; };
 		047C767E58959ACBC530802D /* cstypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cstypes.h; sourceTree = "<group>"; };
 		0884B4DAAA7E60F85D3A8B6A /* ProfileScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreen.swift; sourceTree = "<group>"; };
 		0ABB65951F6B1007053323C2 /* odbcss.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = odbcss.h; sourceTree = "<group>"; };
 		0D543F3E5A2F2FD3C181DDC9 /* LegacyRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyRepository.swift; sourceTree = "<group>"; };
+		0F721052652E162B3148FCAF /* AppBranding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBranding.swift; sourceTree = "<group>"; };
 		0FD8C18EE45F32ACC215E842 /* tds_sysdep_public.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tds_sysdep_public.h; sourceTree = "<group>"; };
 		10C7F475EBE90002D80BFEFB /* sqldb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sqldb.h; sourceTree = "<group>"; };
 		122CF3C27BC2707CE77F3BD0 /* libfreetds-universal-legacy.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libfreetds-universal-legacy.a"; sourceTree = "<group>"; };
@@ -113,7 +117,7 @@
 		1A0CD71DA73E0A4F89EE1F56 /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
 		1DC8017C9CAD0CB67EFA05A5 /* sybfront.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sybfront.h; sourceTree = "<group>"; };
 		22AC7F46DD573E52C0E707B0 /* ctpublic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ctpublic.h; sourceTree = "<group>"; };
-		2D17DA8E87E6D41E3FD9BAF3 /* MakaleSwiftUI-iOS-2.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; name = "MakaleSwiftUI-iOS-2.app"; path = MedLibAkademi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2D17DA8E87E6D41E3FD9BAF3 /* MakaleSwiftUI-iOS-2.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "MakaleSwiftUI-iOS-2.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2D20BE3C222ED2107886EBCB /* MainShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainShellView.swift; sourceTree = "<group>"; };
 		32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLGateway.swift; sourceTree = "<group>"; };
 		366A6488F1212CE5289889CB /* JournalsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsScreen.swift; sourceTree = "<group>"; };
@@ -129,7 +133,7 @@
 		783655A2274AAEB98228996D /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
 		7B121AF93C4684C5A72013A9 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchScreen.swift; sourceTree = "<group>"; };
-		8F4346012E626E71EA746DA9 /* MedLibKlinik.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MedLibKlinik.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F4346012E626E71EA746DA9 /* MakaleSwiftUI-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "MakaleSwiftUI-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyConfig.swift; sourceTree = "<group>"; };
 		91748B548B2A2034DABDA121 /* SQLClient.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SQLClient.m; sourceTree = "<group>"; };
 		AA233BF698152BF3507B7C1C /* HistoryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryScreen.swift; sourceTree = "<group>"; };
@@ -226,6 +230,7 @@
 		2289948A295749F3E809BF66 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				0F721052652E162B3148FCAF /* AppBranding.swift */,
 				EE844C13F3BED0C1F8F6041F /* MakaleSwiftUI-Bridging-Header.h */,
 				4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */,
 			);
@@ -321,7 +326,7 @@
 			isa = PBXGroup;
 			children = (
 				2D17DA8E87E6D41E3FD9BAF3 /* MakaleSwiftUI-iOS-2.app */,
-				8F4346012E626E71EA746DA9 /* MedLibKlinik.app */,
+				8F4346012E626E71EA746DA9 /* MakaleSwiftUI-iOS.app */,
 				002B1E85F227F42F0941CA52 /* MakaleSwiftUI.app */,
 			);
 			name = Products;
@@ -346,7 +351,7 @@
 			packageProductDependencies = (
 			);
 			productName = "MakaleSwiftUI-iOS";
-			productReference = 8F4346012E626E71EA746DA9 /* MedLibKlinik.app */;
+			productReference = 8F4346012E626E71EA746DA9 /* MakaleSwiftUI-iOS.app */;
 			productType = "com.apple.product-type.application";
 		};
 		065C4A1E1081A7172FA0C044 /* MakaleSwiftUI */ = {
@@ -396,9 +401,13 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					055F5E20557DE702A1884F78 = {
+						DevelopmentTeam = T76DN37KU3;
+						ProvisioningStyle = Manual;
+					};
 					F4F651E4093A6E7973C6C18D = {
-						DevelopmentTeam = WHXP47595M;
-						ProvisioningStyle = Automatic;
+						DevelopmentTeam = T76DN37KU3;
+						ProvisioningStyle = Manual;
 					};
 				};
 			};
@@ -466,6 +475,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9754C59A7B401956CC18D299 /* ActivationScreen.swift in Sources */,
+				1D79C2113DC31AC793A35657 /* AppBranding.swift in Sources */,
 				70693F7A0D5629133B001490 /* AppModels.swift in Sources */,
 				2C96D98B5E966D1AC54B0736 /* AppState.swift in Sources */,
 				61B8B0A0D625E1CFDBA5DA14 /* AssetLibrary.swift in Sources */,
@@ -496,6 +506,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F05552E5151E267A7B978DF2 /* ActivationScreen.swift in Sources */,
+				310DF3EB1D72F2BA40C5D52B /* AppBranding.swift in Sources */,
 				1222D0DFEC54E3E5DE51848A /* AppModels.swift in Sources */,
 				DE0FDCCD228135EDD097F0F6 /* AppState.swift in Sources */,
 				06A80EE1F7781CC5F882B3ED /* AssetLibrary.swift in Sources */,
@@ -526,6 +537,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E2F2055E0D859C11E0C54DCA /* ActivationScreen.swift in Sources */,
+				FDC2BAB667FB32B91245DD86 /* AppBranding.swift in Sources */,
 				007861EF29AF69A005D0369C /* AppModels.swift in Sources */,
 				395D84FA3AF0EFF75BF2BAA1 /* AppState.swift in Sources */,
 				F15B316FDFCE9AF649B99B44 /* AssetLibrary.swift in Sources */,
@@ -624,10 +636,8 @@
 				APP_DISPLAY_NAME = MedLib;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TMXJRV424Y;
+				DEVELOPMENT_TEAM = T76DN37KU3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
@@ -647,10 +657,9 @@
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-iossim-arm64-repacked.a",
 					"-liconv",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.codex.MakaleSwiftUI.iOS;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codex.MakaleSwiftUI.iOS-2";
 				PRODUCT_NAME = MedLibKlinik;
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "MedLib Academi";
+				PROVISIONING_PROFILE_SPECIFIER = "MedLib Clinic";
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -695,10 +704,8 @@
 				APP_DISPLAY_NAME = MedLib;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = T76DN37KU3;
+				DEVELOPMENT_TEAM = T76DN37KU3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
@@ -720,8 +727,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codex.MakaleSwiftUI.iOS-2";
 				PRODUCT_NAME = MedLibAkademi;
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "MedLib Clinic";
+				PROVISIONING_PROFILE_SPECIFIER = "MedLib Clinic";
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -735,10 +741,8 @@
 				APP_DISPLAY_NAME = MedLib;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = T76DN37KU3;
+				DEVELOPMENT_TEAM = T76DN37KU3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
@@ -760,8 +764,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.codex.MakaleSwiftUI.iOS-2";
 				PRODUCT_NAME = MedLibAkademi;
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "MedLib Clinic";
+				PROVISIONING_PROFILE_SPECIFIER = "MedLib Clinic";
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -775,10 +778,8 @@
 				APP_DISPLAY_NAME = MedLib;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = TMXJRV424Y;
+				DEVELOPMENT_TEAM = T76DN37KU3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
@@ -798,10 +799,9 @@
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient/libfreetds-iossim-arm64-repacked.a",
 					"-liconv",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.codex.MakaleSwiftUI.iOS;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codex.MakaleSwiftUI.iOS-2";
 				PRODUCT_NAME = MedLibKlinik;
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "MedLib Academi";
+				PROVISIONING_PROFILE_SPECIFIER = "MedLib Clinic";
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";

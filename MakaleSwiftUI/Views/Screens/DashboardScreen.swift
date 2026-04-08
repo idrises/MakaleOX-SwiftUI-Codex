@@ -11,7 +11,7 @@ struct DashboardScreen: View {
             VStack(alignment: .leading, spacing: 24) {
                 ScreenHeader(
                     eyebrow: "Overview",
-                    title: "Medical Academic Library",
+                    title: AppBranding.title,
                     subtitle: "Journals, articles, books, and videos organized for focused medical study."
                 )
 

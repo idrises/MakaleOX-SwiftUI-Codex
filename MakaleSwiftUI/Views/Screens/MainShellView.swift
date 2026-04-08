@@ -31,18 +31,13 @@ struct MainShellView: View {
                     if let session = appState.session {
                         SectionCard {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text("Welcome back")
-                                    .font(.custom("Avenir Next Medium", size: 13))
+                                Text(AppBranding.title)
+                                    .font(.custom("Avenir Next Demi Bold", size: 15))
                                     .foregroundStyle(Palette.highlight)
                                 Text(session.displayName)
-                                    .font(.custom("Avenir Next Bold", size: 24))
+                                    .font(.custom("Avenir Next Demi Bold", size: 20))
                                     .lineLimit(2)
                                     .fixedSize(horizontal: false, vertical: true)
-                                Text(session.email)
-                                    .font(.custom("Avenir Next Regular", size: 13))
-                                    .foregroundStyle(Palette.muted)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
                                 StatusPill(
                                     text: session.isExpired ? "Expired" : "Active until \(session.expireDate)",
                                     tint: session.isExpired ? Palette.danger : Palette.accent
@@ -350,7 +345,7 @@ struct MainShellView: View {
 
     private var sidebarMinWidth: CGFloat {
 #if os(iOS)
-        return isRegularIPadLayout ? 172 : 176
+        return isRegularIPadLayout ? 214 : 198
 #else
         return 238
 #endif
@@ -358,7 +353,7 @@ struct MainShellView: View {
 
     private var sidebarIdealWidth: CGFloat {
 #if os(iOS)
-        return isRegularIPadLayout ? 184 : 184
+        return isRegularIPadLayout ? 228 : 208
 #else
         return 252
 #endif
@@ -366,7 +361,7 @@ struct MainShellView: View {
 
     private var sidebarMaxWidth: CGFloat {
 #if os(iOS)
-        return isRegularIPadLayout ? 196 : 192
+        return isRegularIPadLayout ? 244 : 220
 #else
         return 266
 #endif

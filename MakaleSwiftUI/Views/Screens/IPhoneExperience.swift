@@ -144,16 +144,6 @@ private enum PhoneCombinedSearchItem: Identifiable {
     }
 }
 
-private enum PhoneAppBranding {
-    static var dashboardTitle: String {
-        if let title = Bundle.main.object(forInfoDictionaryKey: "AppBrandTitle") as? String,
-           !title.isEmpty {
-            return title
-        }
-        return "MedLib"
-    }
-}
-
 struct IPhoneRootShellView: View {
     @EnvironmentObject private var appState: AppState
     @State private var rootTab: PhoneRootTab = .home
@@ -816,7 +806,7 @@ private struct PhoneDashboardScreen: View {
                                 Text("Welcome back")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .foregroundStyle(Palette.highlight)
-                                Text(PhoneAppBranding.dashboardTitle)
+                                Text(AppBranding.title)
                                     .font(.system(size: 22, weight: .bold, design: .rounded))
                                 Text(session.subject.isEmpty ? session.displayName : session.subject)
                                     .font(.system(size: 12, weight: .medium, design: .rounded))
