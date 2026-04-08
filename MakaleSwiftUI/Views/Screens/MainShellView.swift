@@ -74,12 +74,30 @@ struct MainShellView: View {
         }
         .toolbar {
             #if os(iOS)
-            if shouldShowSplitHeaderMenuButton {
+            if shouldShowSplitHeaderMenu {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        splitViewVisibility = .all
+                    Menu {
+                        Button {
+                            splitViewVisibility = .all
+                        } label: {
+                            Label("Show Sidebar", systemImage: "sidebar.leading")
+                        }
+
+                        Divider()
+
+                        ForEach(AppSection.allCases) { section in
+                            Button {
+                                appState.selectedSection = section
+                            } label: {
+                                Label(section.title, systemImage: appState.selectedSection == section ? "checkmark.circle.fill" : section.symbolName)
+                            }
+                        }
                     } label: {
-                        Label("Menu", systemImage: "sidebar.leading")
+                        HStack(spacing: 8) {
+                            Image(systemName: appState.selectedSection.symbolName)
+                            Text(appState.selectedSection.title)
+                                .lineLimit(1)
+                        }
                     }
                 }
             }
@@ -391,7 +409,7 @@ struct MainShellView: View {
         horizontalSizeClass == .regular
     }
 
-    private var shouldShowSplitHeaderMenuButton: Bool {
+    private var shouldShowSplitHeaderMenu: Bool {
         isRegularIPadLayout && splitViewVisibility == .detailOnly
     }
 
