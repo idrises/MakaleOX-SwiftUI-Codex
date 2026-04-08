@@ -1000,7 +1000,7 @@ struct VideoPlayerScreen: View {
     private var iosVideoBody: some View {
         GeometryReader { proxy in
             let horizontalPadding = horizontalSizeClass == .regular ? 26.0 : 18.0
-            let topInset = max(proxy.safeAreaInsets.top - 8, 8)
+            let topInset = horizontalSizeClass == .regular ? 10.0 : 4.0
             let bottomInset = max(proxy.safeAreaInsets.bottom, 18)
 
             ZStack {
@@ -1033,7 +1033,7 @@ struct VideoPlayerScreen: View {
                     iosTopBar
                         .padding(.horizontal, horizontalPadding)
                         .padding(.top, topInset)
-                        .padding(.bottom, 14)
+                        .padding(.bottom, 10)
 
                     ScrollView(.vertical) {
                         VStack(alignment: .leading, spacing: 18) {
