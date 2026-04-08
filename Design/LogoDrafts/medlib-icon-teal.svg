@@ -1,0 +1,10 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="224" fill="#F8FBFB"/>
+  <g stroke="#428598" stroke-width="20" stroke-linecap="round">
+    <path d="M246 274C317 196 404 156 512 156C620 156 707 196 778 274"/>
+    <path d="M246 750C317 828 404 868 512 868C620 868 707 828 778 750"/>
+  </g>
+  <g fill="#428598">
+    <text x="512" y="586" text-anchor="middle" font-family="Didot, 'Bodoni 72', 'Times New Roman', serif" font-size="206" letter-spacing="3">ML</text>
+  </g>
+</svg>

@@ -20,6 +20,7 @@ enum SQLGatewayError: LocalizedError {
     }
 }
 
+#if os(macOS) || os(iOS)
 private final class SQLClientDelegateProxy: NSObject, SQLClientDelegate {
     private let lock = NSLock()
     private var lastErrorDetail = ""
@@ -151,8 +152,11 @@ actor SQLGateway {
         }
 
         let retryHints = [
+            "[20009]",
             "[20047]",
             "[20056]",
+            "unable to connect",
+            "adaptive server is unavailable or does not exist",
             "dbprocess is dead",
             "error in closing network connection",
             "adaptive server connection timed out",
@@ -196,3 +200,15 @@ actor SQLGateway {
     }
 
 }
+#else
+actor SQLGateway {
+    func query(_ sql: String, parameters: [Any?] = [], timeout: Int = 60) async throws -> [SQLRow] {
+        throw SQLGatewayError.connectionFailed("iPad and iPhone builds still need an iOS-compatible SQL client layer.")
+    }
+
+    @discardableResult
+    func execute(_ sql: String, parameters: [Any?] = [], timeout: Int = 60) async throws -> Int {
+        throw SQLGatewayError.connectionFailed("iPad and iPhone builds still need an iOS-compatible SQL client layer.")
+    }
+}
+#endif

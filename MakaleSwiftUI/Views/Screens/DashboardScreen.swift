@@ -2,6 +2,9 @@ import SwiftUI
 
 struct DashboardScreen: View {
     @EnvironmentObject private var appState: AppState
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
 
     var body: some View {
         ScrollView {
@@ -105,7 +108,23 @@ struct DashboardScreen: View {
     }
 
     private var compactDashboardColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 304, maximum: 354), spacing: 10, alignment: .top)]
+        [GridItem(.adaptive(minimum: dashboardCardMinimumWidth, maximum: dashboardCardMaximumWidth), spacing: 10, alignment: .top)]
+    }
+
+    private var dashboardCardMinimumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 224 : 280
+#else
+        304
+#endif
+    }
+
+    private var dashboardCardMaximumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 260 : 332
+#else
+        354
+#endif
     }
 
     @ViewBuilder

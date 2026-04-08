@@ -7,6 +7,9 @@ private enum VideosLayoutMode: String {
 
 struct VideosScreen: View {
     @EnvironmentObject private var appState: AppState
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
     @AppStorage("videos.layout.mode") private var layoutModeRawValue = VideosLayoutMode.list.rawValue
     @State private var searchText = ""
 
@@ -81,7 +84,7 @@ struct VideosScreen: View {
     private var galleryContent: some View {
         ScrollView {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 304, maximum: 354), spacing: 10, alignment: .top)],
+                columns: [GridItem(.adaptive(minimum: galleryCardMinimumWidth, maximum: galleryCardMaximumWidth), spacing: 10, alignment: .top)],
                 spacing: 10
             ) {
                 ForEach(filteredVideos, id: \.id) { video in
@@ -140,5 +143,21 @@ struct VideosScreen: View {
                 .joined(separator: " ")
                 .matchesNormalizedSearch(query)
         }
+    }
+
+    private var galleryCardMinimumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 224 : 280
+#else
+        304
+#endif
+    }
+
+    private var galleryCardMaximumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 260 : 332
+#else
+        354
+#endif
     }
 }

@@ -150,6 +150,12 @@ struct HistoryScreen: View {
                 }
             }
         }
+        .task {
+            applyPreferredPageSelection()
+        }
+        .onChange(of: appState.historyNavigationToken) { _ in
+            applyPreferredPageSelection()
+        }
     }
 
     private func coverURLs(for entry: HistoryEntry) -> [URL] {
@@ -220,5 +226,11 @@ struct HistoryScreen: View {
 
     private var hasActiveSearch: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func applyPreferredPageSelection() {
+        guard HistoryPage(rawValue: appState.preferredHistoryPageRawValue) != nil else { return }
+        selectedPageRawValue = appState.preferredHistoryPageRawValue
+        searchText = ""
     }
 }

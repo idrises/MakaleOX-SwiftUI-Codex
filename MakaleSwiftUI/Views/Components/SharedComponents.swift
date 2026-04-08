@@ -1,4 +1,10 @@
+#if canImport(AppKit)
 import AppKit
+typealias PlatformImage = NSImage
+#elseif canImport(UIKit)
+import UIKit
+typealias PlatformImage = UIImage
+#endif
 import AVKit
 import CryptoKit
 import PDFKit
@@ -124,6 +130,7 @@ struct ScreenHeader: View {
     let eyebrow: String
     let title: String
     let subtitle: String
+    var titleSize: CGFloat = 34
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -132,10 +139,12 @@ struct ScreenHeader: View {
                 .tracking(1.6)
                 .foregroundStyle(Palette.highlight)
             Text(title)
-                .font(.custom("Avenir Next Bold", size: 34))
-            Text(subtitle)
-                .font(.custom("Avenir Next Regular", size: 15))
-                .foregroundStyle(Palette.muted)
+                .font(.custom("Avenir Next Bold", size: titleSize))
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.custom("Avenir Next Regular", size: 15))
+                    .foregroundStyle(Palette.muted)
+            }
         }
     }
 }
@@ -198,7 +207,7 @@ struct FavoriteBadgeButton: View {
 
 @MainActor
 private final class ArtworkLoader: ObservableObject {
-    private static let cache = NSCache<NSURL, NSImage>()
+    private static let cache = NSCache<NSURL, PlatformImage>()
     private static let diskCacheDirectory: URL? = {
         guard let baseDirectory = try? LegacyConfig.applicationSupportDirectory() else { return nil }
         let cacheDirectory = baseDirectory.appendingPathComponent("ArtworkCache", isDirectory: true)
@@ -206,7 +215,7 @@ private final class ArtworkLoader: ObservableObject {
         return cacheDirectory
     }()
 
-    @Published private(set) var image: NSImage?
+    @Published private(set) var image: PlatformImage?
     @Published private(set) var isLoading = false
 
     private var currentKey = ""
@@ -248,7 +257,7 @@ private final class ArtworkLoader: ObservableObject {
         }
     }
 
-    static func cachedImage(for urls: [URL]) -> NSImage? {
+    static func cachedImage(for urls: [URL]) -> PlatformImage? {
         for url in urls {
             if let cached = cache.object(forKey: url as NSURL) {
                 return cached
@@ -263,7 +272,7 @@ private final class ArtworkLoader: ObservableObject {
         return nil
     }
 
-    private static func loadFirstAvailableImage(from urls: [URL]) async -> NSImage? {
+    private static func loadFirstAvailableImage(from urls: [URL]) async -> PlatformImage? {
         for url in urls {
             if let cached = cache.object(forKey: url as NSURL) {
                 return cached
@@ -282,7 +291,7 @@ private final class ArtworkLoader: ObservableObject {
                 let (data, response) = try await URLSession.shared.data(for: request)
                 guard let httpResponse = response as? HTTPURLResponse,
                       (200...299).contains(httpResponse.statusCode),
-                      let image = NSImage(data: data) else {
+                      let image = PlatformImage(data: data) else {
                     continue
                 }
 
@@ -297,10 +306,10 @@ private final class ArtworkLoader: ObservableObject {
         return nil
     }
 
-    private static func diskCachedImage(for url: URL) -> NSImage? {
+    private static func diskCachedImage(for url: URL) -> PlatformImage? {
         guard let fileURL = cacheFileURL(for: url),
               let data = try? Data(contentsOf: fileURL),
-              let image = NSImage(data: data) else {
+              let image = PlatformImage(data: data) else {
             return nil
         }
 
@@ -339,9 +348,15 @@ struct RemoteArtworkView: View {
                 )
 
             if let image = loader.image ?? ArtworkLoader.cachedImage(for: urls) {
+#if canImport(AppKit)
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFill()
+#else
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+#endif
             } else if loader.isLoading {
                 ProgressView().tint(Palette.accent)
             } else {
@@ -544,31 +559,59 @@ struct StatusPill: View {
 
 struct DocumentViewerScreen: View {
     let document: DocumentPresentation
-    @Environment(\.dismiss) private var dismiss
+    let backLabel: String
+    let onClose: () -> Void
+    let showsMetadataHeader: Bool
 
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(document.title)
-                        .font(.custom("Avenir Next Demi Bold", size: 18))
-                    Text(document.url.lastPathComponent)
-                        .font(.custom("Avenir Next Regular", size: 12))
-                        .foregroundStyle(Palette.muted)
-                }
-                Spacer()
-                Button("Export") { exportPDF() }
-                Button("Close") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-            }
-            .padding(18)
-            .background(Palette.surfaceStrong)
-
-            PDFContainerView(url: document.url)
-        }
-        .frame(minWidth: 960, minHeight: 720)
+    init(
+        document: DocumentPresentation,
+        backLabel: String,
+        showsMetadataHeader: Bool = true,
+        onClose: @escaping () -> Void
+    ) {
+        self.document = document
+        self.backLabel = backLabel
+        self.showsMetadataHeader = showsMetadataHeader
+        self.onClose = onClose
     }
 
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Button(action: onClose) {
+                    Label(backLabel, systemImage: "chevron.left")
+                        .font(.custom("Avenir Next Demi Bold", size: 13))
+                        .foregroundStyle(Palette.muted)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+#if os(macOS)
+                Button("Export") { exportPDF() }
+#endif
+            }
+
+            if showsMetadataHeader {
+                ScreenHeader(
+                    eyebrow: "Reader",
+                    title: document.title,
+                    subtitle: document.url.lastPathComponent
+                )
+            }
+
+#if os(macOS)
+            PDFContainerView(url: document.url)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 720)
+#else
+            SectionCard {
+                PDFContainerView(url: document.url)
+                    .frame(minHeight: 540)
+            }
+#endif
+        }
+    }
+
+#if os(macOS)
     private func exportPDF() {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = document.url.lastPathComponent
@@ -576,31 +619,168 @@ struct DocumentViewerScreen: View {
             try? FileManager.default.copyItem(at: document.url, to: destination)
         }
     }
+#endif
 }
 
 struct VideoPlayerScreen: View {
     let video: VideoPresentation
-    @Environment(\.dismiss) private var dismiss
+    let backLabel: String
+    let onClose: () -> Void
+    @State private var player: AVPlayer
+#if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+#endif
+
+    init(video: VideoPresentation, backLabel: String, onClose: @escaping () -> Void) {
+        self.video = video
+        self.backLabel = backLabel
+        self.onClose = onClose
+        _player = State(initialValue: AVPlayer(url: video.url))
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Text(video.title)
-                    .font(.custom("Avenir Next Demi Bold", size: 18))
+                Button(action: onClose) {
+                    Label(backLabel, systemImage: "chevron.left")
+                        .font(.custom("Avenir Next Demi Bold", size: 13))
+                        .foregroundStyle(Palette.muted)
+                }
+                .buttonStyle(.plain)
                 Spacer()
-                Button("Close") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
             }
-            .padding(18)
-            .background(Palette.surfaceStrong)
 
-            VideoPlayer(player: AVPlayer(url: video.url))
-                .background(Color.black)
+            ScreenHeader(
+                eyebrow: "Video",
+                title: video.title,
+                subtitle: "",
+                titleSize: videoTitleSize
+            )
+
+            SectionCard {
+#if os(macOS)
+                ZStack(alignment: .bottomTrailing) {
+                    MacVideoPlayerContainer(player: player)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 620)
+
+                    HStack(spacing: 10) {
+                        PlayerSkipButton(
+                            systemImage: "gobackward.10",
+                            action: { seek(by: -10) }
+                        )
+
+                        PlayerSkipButton(
+                            systemImage: "goforward.10",
+                            action: { seek(by: 10) }
+                        )
+                    }
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 22)
+                }
+#else
+                IOSInlineVideoPlayerContainer(player: player)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 420)
+#endif
+            }
         }
-        .frame(minWidth: 960, minHeight: 620)
+        .onAppear {
+            player.play()
+        }
+        .onDisappear {
+            player.pause()
+        }
+    }
+
+    private func seek(by delta: Double) {
+        let currentSeconds = max(player.currentTime().seconds, 0)
+        guard currentSeconds.isFinite else { return }
+
+        let durationSeconds = player.currentItem?.duration.seconds ?? .infinity
+        let targetSeconds = currentSeconds + delta
+        let boundedSeconds: Double
+
+        if durationSeconds.isFinite && durationSeconds > 0 {
+            boundedSeconds = min(max(targetSeconds, 0), durationSeconds)
+        } else {
+            boundedSeconds = max(targetSeconds, 0)
+        }
+
+        let targetTime = CMTime(seconds: boundedSeconds, preferredTimescale: 600)
+        player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    private var videoTitleSize: CGFloat {
+#if os(iOS)
+        return horizontalSizeClass == .regular ? 22 : 24
+#else
+        return 20
+#endif
     }
 }
 
+struct PlayerSkipButton: View {
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.white)
+                .frame(width: 42, height: 42)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+#if os(macOS)
+struct MacVideoPlayerContainer: NSViewRepresentable {
+    let player: AVPlayer
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.player = player
+        view.controlsStyle = .floating
+        view.showsFullScreenToggleButton = true
+        view.allowsPictureInPicturePlayback = true
+        view.videoGravity = .resizeAspect
+        return view
+    }
+
+    func updateNSView(_ nsView: AVPlayerView, context: Context) {
+        nsView.player = player
+    }
+}
+#else
+struct IOSInlineVideoPlayerContainer: UIViewControllerRepresentable {
+    let player: AVPlayer
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = player
+        controller.showsPlaybackControls = true
+        controller.allowsPictureInPicturePlayback = true
+        controller.canStartPictureInPictureAutomaticallyFromInline = true
+        controller.entersFullScreenWhenPlaybackBegins = false
+        controller.exitsFullScreenWhenPlaybackEnds = false
+        controller.videoGravity = .resizeAspect
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        uiViewController.player = player
+    }
+}
+#endif
+
+#if os(macOS)
 struct PDFContainerView: NSViewRepresentable {
     let url: URL
 
@@ -617,3 +797,21 @@ struct PDFContainerView: NSViewRepresentable {
         nsView.document = PDFDocument(url: url)
     }
 }
+#else
+struct PDFContainerView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> PDFView {
+        let view = PDFView()
+        view.autoScales = true
+        view.displayMode = .singlePageContinuous
+        view.displayDirection = .vertical
+        view.backgroundColor = .white
+        return view
+    }
+
+    func updateUIView(_ uiView: PDFView, context: Context) {
+        uiView.document = PDFDocument(url: url)
+    }
+}
+#endif

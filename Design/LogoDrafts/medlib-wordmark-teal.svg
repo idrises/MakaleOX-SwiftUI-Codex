@@ -1,0 +1,11 @@
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="1200" fill="#F8FBFB"/>
+  <g stroke="#428598" stroke-width="24" stroke-linecap="round">
+    <path d="M456 250C555 145 703 88 872 88C1041 88 1189 145 1288 250"/>
+    <path d="M456 946C555 1051 703 1108 872 1108C1041 1108 1189 1051 1288 946"/>
+  </g>
+  <g fill="#428598">
+    <text x="800" y="640" text-anchor="middle" font-family="Didot, 'Bodoni 72', 'Times New Roman', serif" font-size="320" letter-spacing="4">MEDLIB</text>
+    <text x="800" y="760" text-anchor="middle" font-family="'Avenir Next', Avenir, Helvetica, Arial, sans-serif" font-size="74" font-weight="500" letter-spacing="3">MEDICAL ACADEMIC RESEARCH LIBRARY</text>
+  </g>
+</svg>

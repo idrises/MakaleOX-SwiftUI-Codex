@@ -7,6 +7,9 @@ private enum BooksLayoutMode: String {
 
 struct BooksScreen: View {
     @EnvironmentObject private var appState: AppState
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
     @AppStorage("books.layout.mode") private var layoutModeRawValue = BooksLayoutMode.list.rawValue
     @State private var searchText = ""
     @State private var activeBook: Book?
@@ -20,6 +23,11 @@ struct BooksScreen: View {
             .onChange(of: appState.pendingBookNavigationID) { _ in
                 consumePendingNavigation()
             }
+            .onChange(of: appState.booksFavoritesOnly) { isActive in
+                if isActive {
+                    searchText = ""
+                }
+            }
     }
 
     private var bookPane: some View {
@@ -27,13 +35,18 @@ struct BooksScreen: View {
             if let activeBook {
                 BookChaptersPage(
                     book: activeBook,
-                    backTitle: appState.bookReturnSection == .dashboard ? "Back To Dashboard" : "Back To Books",
+                    backTitle: bookBackTitle,
                     onBack: {
                         if appState.bookReturnSection == .dashboard {
                             self.activeBook = nil
                             appState.bookReturnSection = nil
                             appState.pendingBookNavigationID = nil
                             appState.selectedSection = .dashboard
+                        } else if appState.bookReturnSection == .profile {
+                            self.activeBook = nil
+                            appState.bookReturnSection = nil
+                            appState.pendingBookNavigationID = nil
+                            appState.selectedSection = .profile
                         } else {
                             self.activeBook = nil
                         }
@@ -75,6 +88,17 @@ struct BooksScreen: View {
                 .buttonStyle(.bordered)
             }
 
+            if appState.booksFavoritesOnly {
+                HStack(spacing: 10) {
+                    StatusPill(text: "Favorites only", tint: Palette.accent)
+                    Button("Show All") {
+                        appState.booksFavoritesOnly = false
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+
             if filteredBooks.isEmpty {
                 EmptyStateView(
                     title: appState.books.isEmpty ? "No books loaded" : "No books matched",
@@ -99,6 +123,20 @@ struct BooksScreen: View {
         BooksLayoutMode(rawValue: layoutModeRawValue) ?? .list
     }
 
+    private var bookBackTitle: String {
+        switch appState.bookReturnSection {
+        case .dashboard:
+            return "Back To Dashboard"
+        case .profile:
+            if appState.profileSelectedDetailSectionRawValue == ProfileDetailSection.favoriteBooks.rawValue {
+                return "Back To Favorite Books"
+            }
+            return "Back To Profile"
+        default:
+            return "Back To Books"
+        }
+    }
+
     private var listContent: some View {
         LazyVStack(spacing: 14) {
             ForEach(filteredBooks, id: \.id) { book in
@@ -109,7 +147,7 @@ struct BooksScreen: View {
 
     private var galleryContent: some View {
         LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 304, maximum: 354), spacing: 10, alignment: .top)],
+            columns: [GridItem(.adaptive(minimum: galleryCardMinimumWidth, maximum: galleryCardMaximumWidth), spacing: 10, alignment: .top)],
             spacing: 10
         ) {
             ForEach(filteredBooks, id: \.id) { book in
@@ -179,17 +217,36 @@ struct BooksScreen: View {
     }
 
     private var filteredBooks: [Book] {
+        let scopedBooks = appState.books.filter { book in
+            !appState.booksFavoritesOnly || appState.favoritesStore.isFavorite(book: book)
+        }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return appState.books }
-        return appState.books.filter {
+        guard !query.isEmpty else { return scopedBooks }
+        return scopedBooks.filter {
             [$0.title, $0.editors, $0.year, $0.company, $0.isbnOnline]
                 .joined(separator: " ")
                 .matchesNormalizedSearch(query)
         }
     }
+
+    private var galleryCardMinimumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 224 : 280
+#else
+        304
+#endif
+    }
+
+    private var galleryCardMaximumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 260 : 332
+#else
+        354
+#endif
+    }
 }
 
-private struct BookChaptersPage: View {
+struct BookChaptersPage: View {
     @EnvironmentObject private var appState: AppState
 
     let book: Book

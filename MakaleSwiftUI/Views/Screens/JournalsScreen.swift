@@ -7,6 +7,9 @@ private enum JournalsLayoutMode: String {
 
 struct JournalsScreen: View {
     @EnvironmentObject private var appState: AppState
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
     @AppStorage("journals.layout.mode") private var layoutModeRawValue = JournalsLayoutMode.list.rawValue
     @State private var searchText = ""
     @State private var activeJournal: Journal?
@@ -18,8 +21,16 @@ struct JournalsScreen: View {
             .task {
                 consumePendingNavigation()
             }
+            .onChange(of: appState.pendingJournalNavigationID) { _ in
+                consumePendingNavigation()
+            }
             .onChange(of: appState.pendingJournalIssueNavigationID) { _ in
                 consumePendingNavigation()
+            }
+            .onChange(of: appState.journalsFavoritesOnly) { isActive in
+                if isActive {
+                    searchText = ""
+                }
             }
     }
 
@@ -47,14 +58,22 @@ struct JournalsScreen: View {
                 } else {
                     JournalVolumesPage(
                         journal: activeJournal,
-                        backTitle: appState.journalReturnSection == .dashboard ? "Back To Dashboard" : "Back To Journals",
+                        backTitle: volumesBackTitle,
                         onBack: {
                             if appState.journalReturnSection == .dashboard {
                                 self.activeIssue = nil
                                 self.activeJournal = nil
                                 appState.journalReturnSection = nil
+                                appState.pendingJournalNavigationID = nil
                                 appState.pendingJournalIssueNavigationID = nil
                                 appState.selectedSection = .dashboard
+                            } else if appState.journalReturnSection == .profile {
+                                self.activeIssue = nil
+                                self.activeJournal = nil
+                                appState.journalReturnSection = nil
+                                appState.pendingJournalNavigationID = nil
+                                appState.pendingJournalIssueNavigationID = nil
+                                appState.selectedSection = .profile
                             } else {
                                 self.activeIssue = nil
                                 self.activeJournal = nil
@@ -95,6 +114,17 @@ struct JournalsScreen: View {
                         .buttonStyle(.bordered)
                     }
 
+                    if appState.journalsFavoritesOnly {
+                        HStack(spacing: 10) {
+                            StatusPill(text: "Favorites only", tint: Palette.accent)
+                            Button("Show All") {
+                                appState.journalsFavoritesOnly = false
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+
                     if filteredJournals.isEmpty {
                         EmptyStateView(
                             title: appState.journals.isEmpty ? "No journals loaded" : "No journals matched",
@@ -121,10 +151,27 @@ struct JournalsScreen: View {
         JournalsLayoutMode(rawValue: layoutModeRawValue) ?? .list
     }
 
+    private var volumesBackTitle: String {
+        switch appState.journalReturnSection {
+        case .dashboard:
+            return "Back To Dashboard"
+        case .profile:
+            if appState.profileSelectedDetailSectionRawValue == ProfileDetailSection.favoriteJournals.rawValue {
+                return "Back To Favorite Journals"
+            }
+            return "Back To Profile"
+        default:
+            return "Back To Journals"
+        }
+    }
+
     private var filteredJournals: [Journal] {
+        let scopedJournals = appState.journals.filter { journal in
+            !appState.journalsFavoritesOnly || appState.favoritesStore.isFavorite(journal: journal)
+        }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return appState.journals }
-        return appState.journals.filter {
+        guard !query.isEmpty else { return scopedJournals }
+        return scopedJournals.filter {
             [$0.name, $0.issn, $0.subject]
                 .joined(separator: " ")
                 .matchesNormalizedSearch(query)
@@ -141,7 +188,7 @@ struct JournalsScreen: View {
 
     private var galleryContent: some View {
         LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 304, maximum: 354), spacing: 10, alignment: .top)],
+            columns: [GridItem(.adaptive(minimum: galleryCardMinimumWidth, maximum: galleryCardMaximumWidth), spacing: 10, alignment: .top)],
             spacing: 10
         ) {
             ForEach(filteredJournals, id: \.id) { journal in
@@ -198,6 +245,15 @@ struct JournalsScreen: View {
     }
 
     private func consumePendingNavigation() {
+        if let pendingJournalID = appState.pendingJournalNavigationID,
+           let selectedJournal = appState.selectedJournal,
+           selectedJournal.id == pendingJournalID {
+            activeJournal = selectedJournal
+            activeIssue = nil
+            appState.pendingJournalNavigationID = nil
+            return
+        }
+
         guard let pendingID = appState.pendingJournalIssueNavigationID else { return }
         guard let selectedJournal = appState.selectedJournal else { return }
         guard let selectedIssue = appState.selectedIssue, selectedIssue.id == pendingID else { return }
@@ -206,10 +262,29 @@ struct JournalsScreen: View {
         activeIssue = selectedIssue
         appState.pendingJournalIssueNavigationID = nil
     }
+
+    private var galleryCardMinimumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 224 : 280
+#else
+        304
+#endif
+    }
+
+    private var galleryCardMaximumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 260 : 332
+#else
+        354
+#endif
+    }
 }
 
 private struct JournalVolumesPage: View {
     @EnvironmentObject private var appState: AppState
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
 
     let journal: Journal
     let backTitle: String
@@ -266,7 +341,7 @@ private struct JournalVolumesPage: View {
             } else {
                 ScrollView {
                     LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 304, maximum: 354), spacing: 10, alignment: .top)],
+                        columns: [GridItem(.adaptive(minimum: issueCardMinimumWidth, maximum: issueCardMaximumWidth), spacing: 10, alignment: .top)],
                         spacing: 10
                     ) {
                         ForEach(visibleIssues, id: \.id) { issue in
@@ -287,6 +362,22 @@ private struct JournalVolumesPage: View {
     private var visibleIssues: [JournalIssue] {
         guard appState.selectedJournal?.id == journal.id else { return [] }
         return appState.journalIssues
+    }
+
+    private var issueCardMinimumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 224 : 280
+#else
+        304
+#endif
+    }
+
+    private var issueCardMaximumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 260 : 332
+#else
+        354
+#endif
     }
 
     @ViewBuilder

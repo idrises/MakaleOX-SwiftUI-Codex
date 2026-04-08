@@ -59,6 +59,56 @@ enum AppSection: String, CaseIterable, Identifiable {
     }
 }
 
+enum ProfileDetailSection: String, Equatable, Identifiable {
+    case articleHistory
+    case chapterHistory
+    case videoHistory
+    case videoSetHistory
+    case favoriteJournals
+    case favoriteBooks
+    case favoriteVideoSets
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .articleHistory:
+            return "Article History"
+        case .chapterHistory:
+            return "Chapter History"
+        case .videoHistory:
+            return "Video History"
+        case .videoSetHistory:
+            return "Video Set History"
+        case .favoriteJournals:
+            return "Favorite Journals"
+        case .favoriteBooks:
+            return "Favorite Books"
+        case .favoriteVideoSets:
+            return "Favorite Video Sets"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .articleHistory:
+            return "Recently opened articles are surfaced here without leaving the profile page."
+        case .chapterHistory:
+            return "Recently opened chapters are grouped here for quick return access."
+        case .videoHistory:
+            return "Recently watched videos stay visible here for fast replay."
+        case .videoSetHistory:
+            return "Recently watched set videos are grouped here for quick access."
+        case .favoriteJournals:
+            return "Pinned journals collected from your local favorites."
+        case .favoriteBooks:
+            return "Pinned books collected from your local favorites."
+        case .favoriteVideoSets:
+            return "Pinned video sets collected from your local favorites."
+        }
+    }
+}
+
 struct DashboardSnapshot {
     var journalCount: Int = 0
     var articleCount: Int = 0

@@ -1,0 +1,50 @@
+<svg width="2200" height="1480" viewBox="0 0 2200 1480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="boardBG" x1="160" y1="80" x2="1980" y2="1390" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F1EFE6"/>
+      <stop offset="0.6" stop-color="#E6F1ED"/>
+      <stop offset="1" stop-color="#F7EDE5"/>
+    </linearGradient>
+    <filter id="cardShadow" x="130" y="282" width="1940" height="998" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="26"/>
+      <feGaussianBlur stdDeviation="30"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.105882 0 0 0 0 0.156863 0 0 0 0 0.145098 0 0 0 0.14 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <rect width="2200" height="1480" rx="0" fill="url(#boardBG)"/>
+  <text x="150" y="170" fill="#1B2326" font-family="Avenir Next, Inter, sans-serif" font-size="88" font-weight="700">MedLib / Medical Library</text>
+  <text x="150" y="242" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="34" font-weight="500">Four icon directions: clinical, premium, modern, and editorial.</text>
+
+  <g filter="url(#cardShadow)">
+    <rect x="160" y="320" width="880" height="480" rx="44" fill="#FFFFFF" fill-opacity="0.84"/>
+    <rect x="1160" y="320" width="880" height="480" rx="44" fill="#FFFFFF" fill-opacity="0.84"/>
+    <rect x="160" y="860" width="880" height="480" rx="44" fill="#FFFFFF" fill-opacity="0.84"/>
+    <rect x="1160" y="860" width="880" height="480" rx="44" fill="#FFFFFF" fill-opacity="0.84"/>
+  </g>
+
+  <image href="medlib-icon-concept-a-book-cross.svg" x="245" y="390" width="290" height="290"/>
+  <image href="medlib-icon-concept-b-monogram.svg" x="1245" y="390" width="290" height="290"/>
+  <image href="medlib-icon-concept-c-bookmark-pulse.svg" x="245" y="930" width="290" height="290"/>
+  <image href="medlib-icon-concept-d-seal.svg" x="1245" y="930" width="290" height="290"/>
+
+  <text x="590" y="430" fill="#1B2326" font-family="Avenir Next, Inter, sans-serif" font-size="44" font-weight="700">Concept A · Book Cross</text>
+  <text x="590" y="486" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="28" font-weight="500">Clinical and direct. An open book with a medical cross at the seam.</text>
+  <text x="590" y="534" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="28" font-weight="500">Good if you want “medical library” to read instantly.</text>
+
+  <text x="1590" y="430" fill="#1B2326" font-family="Avenir Next, Inter, sans-serif" font-size="44" font-weight="700">Concept B · ML Monogram</text>
+  <text x="1590" y="486" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="28" font-weight="500">Premium and brandable. Strong monogram with a shelf/book silhouette.</text>
+  <text x="1590" y="534" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="28" font-weight="500">Best if you want something cleaner and more “product-like”.</text>
+
+  <text x="590" y="970" fill="#1B2326" font-family="Avenir Next, Inter, sans-serif" font-size="44" font-weight="700">Concept C · Bookmark Pulse</text>
+  <text x="590" y="1026" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="28" font-weight="500">Friendly and modern. A book plus bookmark ribbon plus ECG pulse.</text>
+  <text x="590" y="1074" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="28" font-weight="500">Feels academic, approachable, and a bit more app-store friendly.</text>
+
+  <text x="1590" y="970" fill="#1B2326" font-family="Avenir Next, Inter, sans-serif" font-size="44" font-weight="700">Concept D · Seal</text>
+  <text x="1590" y="1026" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="28" font-weight="500">Institutional and confident. A medallion-like mark with a book core.</text>
+  <text x="1590" y="1074" fill="#5E6D6A" font-family="Avenir Next, Inter, sans-serif" font-size="28" font-weight="500">Best if you want a stronger “medical academy” impression.</text>
+</svg>

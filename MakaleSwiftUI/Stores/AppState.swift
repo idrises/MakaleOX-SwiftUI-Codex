@@ -11,6 +11,29 @@ private enum HistoryReopenError: LocalizedError {
     }
 }
 
+private enum PreferredHistoryPage: String {
+    case all
+    case articles
+    case books
+    case videos
+    case videoSets
+
+    init(kind: HistoryKind?) {
+        switch kind {
+        case .article:
+            self = .articles
+        case .chapter:
+            self = .books
+        case .video:
+            self = .videos
+        case .videoSet:
+            self = .videoSets
+        case nil:
+            self = .all
+        }
+    }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var session: SessionInfo?
@@ -18,6 +41,7 @@ final class AppState: ObservableObject {
     @Published var dashboard = DashboardSnapshot()
     @Published var journals: [Journal] = []
     @Published var selectedJournal: Journal?
+    @Published var pendingJournalNavigationID: String?
     @Published var journalIssues: [JournalIssue] = []
     @Published var selectedIssue: JournalIssue?
     @Published var articles: [Article] = []
@@ -46,9 +70,15 @@ final class AppState: ObservableObject {
     @Published var isLoadingVideoSetEntries = false
     @Published var isRefreshingHistory = false
     @Published private(set) var hasLoadedVideoSetCatalog = false
+    @Published var preferredHistoryPageRawValue = PreferredHistoryPage.all.rawValue
+    @Published var historyNavigationToken = UUID()
+    @Published var journalsFavoritesOnly = false
+    @Published var booksFavoritesOnly = false
+    @Published var videoSetsFavoritesOnly = false
     @Published var loadingTitle = ""
     @Published var loadingDetail = ""
     @Published var loadingProgress: Double?
+    @Published var profileSelectedDetailSectionRawValue: String?
 
     let sessionStore = SessionStore()
     let favoritesStore = FavoritesStore()
@@ -160,6 +190,36 @@ final class AppState: ObservableObject {
         hasLoadedHistory = true
     }
 
+    func showProfileHistory(kind: HistoryKind) {
+        clearScopedLibraryFilters()
+        preferredHistoryPageRawValue = PreferredHistoryPage(kind: kind).rawValue
+        historyNavigationToken = UUID()
+        selectedSection = .history
+    }
+
+    func showFavoriteJournals() {
+        clearScopedLibraryFilters()
+        journalsFavoritesOnly = true
+        selectedSection = .journals
+    }
+
+    func showFavoriteBooks() {
+        clearScopedLibraryFilters()
+        booksFavoritesOnly = true
+        selectedSection = .books
+    }
+
+    func showFavoriteVideoSets() {
+        clearScopedLibraryFilters()
+        videoSetsFavoritesOnly = true
+        selectedSection = .videoSets
+    }
+
+    func dismissActiveContent() {
+        activeDocument = nil
+        activeVideo = nil
+    }
+
     func loadJournals(search: String = "") async {
         await perform("Loading journals") { [self] in
             let activeSession = try await self.syncSessionFromServer()
@@ -194,6 +254,18 @@ final class AppState: ObservableObject {
         }
     }
 
+    func loadVideoSetsForProfile() async {
+        await perform("Loading video sets") { [self] in
+            let activeSession = try await self.syncSessionFromServer()
+            self.videoSets = try await self.repository.fetchVideoSets(subject: activeSession.subject)
+            self.selectedVideoSet = self.selectedVideoSet.flatMap { previous in
+                self.videoSets.first(where: { $0.id == previous.id })
+            }
+            self.hasLoadedVideoSetCatalog = true
+            self.videoSetEntries = []
+        }
+    }
+
     func selectJournal(_ journal: Journal) async {
         activeAlert = nil
         selectedJournal = journal
@@ -221,6 +293,30 @@ final class AppState: ObservableObject {
         if selectedJournal?.id == journal.id {
             isLoadingJournalIssues = false
         }
+    }
+
+    func showProfileJournal(_ journal: Journal) async {
+        activeAlert = nil
+        profileSelectedDetailSectionRawValue = ProfileDetailSection.favoriteJournals.rawValue
+
+        let resolvedJournal: Journal
+        if let existingJournal = journals.first(where: { $0.id == journal.id }) {
+            resolvedJournal = existingJournal
+        } else {
+            journals.insert(journal, at: 0)
+            resolvedJournal = journal
+        }
+
+        selectedJournal = resolvedJournal
+        journalIssues = []
+        selectedIssue = nil
+        articles = []
+        pendingJournalNavigationID = resolvedJournal.id
+        pendingJournalIssueNavigationID = nil
+        journalReturnSection = .profile
+        selectedSection = .journals
+
+        await selectJournal(resolvedJournal)
     }
 
     func selectIssue(_ issue: JournalIssue, forceReload: Bool = false) async {
@@ -301,17 +397,28 @@ final class AppState: ObservableObject {
         guard !(isLoadingVideoSetEntries && selectedVideoSet?.id == set.id) else { return }
 
         activeAlert = nil
+        let wasSameSet = selectedVideoSet?.id == set.id
+        let existingEntries = wasSameSet ? videoSetEntries : []
         selectedVideoSet = set
-        videoSetEntries = []
+        if !wasSameSet {
+            videoSetEntries = []
+        }
         isLoadingVideoSetEntries = true
 
         do {
             let fetchedEntries = try await repository.fetchVideoSetEntries(setName: set.setName)
             if selectedVideoSet?.id == set.id {
-                videoSetEntries = fetchedEntries
+                if wasSameSet, fetchedEntries.isEmpty, !existingEntries.isEmpty {
+                    videoSetEntries = existingEntries
+                } else {
+                    videoSetEntries = fetchedEntries
+                }
             }
         } catch {
             if selectedVideoSet?.id == set.id {
+                if wasSameSet {
+                    videoSetEntries = existingEntries
+                }
                 activeAlert = AppAlert(
                     title: "Something Went Wrong",
                     message: error.localizedDescription
@@ -393,6 +500,27 @@ final class AppState: ObservableObject {
         await selectBook(resolvedBook)
     }
 
+    func showProfileBook(_ book: Book) async {
+        activeAlert = nil
+        profileSelectedDetailSectionRawValue = ProfileDetailSection.favoriteBooks.rawValue
+
+        let resolvedBook: Book
+        if let existingBook = books.first(where: { $0.id == book.id }) {
+            resolvedBook = existingBook
+        } else {
+            books.insert(book, at: 0)
+            resolvedBook = book
+        }
+
+        selectedBook = resolvedBook
+        chapters = []
+        pendingBookNavigationID = resolvedBook.id
+        bookReturnSection = .profile
+        selectedSection = .books
+
+        await selectBook(resolvedBook)
+    }
+
     func runSearch(_ text: String) async {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.isEmpty {
@@ -445,6 +573,27 @@ final class AppState: ObservableObject {
         }
     }
 
+    func showProfileVideoSet(_ set: VideoSet) async {
+        activeAlert = nil
+        profileSelectedDetailSectionRawValue = ProfileDetailSection.favoriteVideoSets.rawValue
+
+        let resolvedSet: VideoSet
+        if let existingSet = videoSets.first(where: { $0.id == set.id }) {
+            resolvedSet = existingSet
+        } else {
+            videoSets.insert(set, at: 0)
+            resolvedSet = set
+        }
+
+        selectedVideoSet = resolvedSet
+        videoSetEntries = []
+        pendingVideoSetNavigationID = resolvedSet.id
+        videoSetReturnSection = .profile
+        selectedSection = .videoSets
+
+        await selectVideoSet(resolvedSet)
+    }
+
     func openArticle(_ article: Article) async {
         guard let session else { return }
         guard validateSession(session) else { return }
@@ -470,6 +619,7 @@ final class AppState: ObservableObject {
                     reference: .article(journal: article.journalName, folder: article.folder, pdfLink: article.pdfLink)
                 )
             )
+            self.activeVideo = nil
             self.activeDocument = DocumentPresentation(title: article.title, url: url)
         }
     }
@@ -496,6 +646,7 @@ final class AppState: ObservableObject {
                     reference: .chapter(isbn: chapter.isbn, pdfLink: chapter.pdfLink)
                 )
             )
+            self.activeVideo = nil
             self.activeDocument = DocumentPresentation(title: chapter.title, url: url)
         }
     }
@@ -520,6 +671,7 @@ final class AppState: ObservableObject {
                 reference: .video(bookJournal: video.bookJournal, link: video.remoteLink)
             )
         )
+        activeDocument = nil
         activeVideo = VideoPresentation(title: video.title, url: url)
     }
 
@@ -580,6 +732,7 @@ final class AppState: ObservableObject {
                 reference: .videoSet(setName: entry.setName, link: entry.remoteLink)
             )
         )
+        activeDocument = nil
         activeVideo = VideoPresentation(title: entry.title, url: url)
     }
 
@@ -588,6 +741,7 @@ final class AppState: ObservableObject {
         case .article, .chapter:
             if FileManager.default.fileExists(atPath: entry.urlString) {
                 let url = URL(fileURLWithPath: entry.urlString)
+                activeVideo = nil
                 activeDocument = DocumentPresentation(title: entry.title, url: url)
                 return
             }
@@ -620,10 +774,12 @@ final class AppState: ObservableObject {
                 }
 
                 self.historyStore.update(entry.updating(urlString: localURL.path, reference: reference))
+                self.activeVideo = nil
                 self.activeDocument = DocumentPresentation(title: entry.title, url: localURL)
             }
         case .video, .videoSet:
             if let url = URL(string: entry.urlString), !entry.urlString.isEmpty {
+                activeDocument = nil
                 activeVideo = VideoPresentation(title: entry.title, url: url)
                 return
             }
@@ -646,6 +802,7 @@ final class AppState: ObservableObject {
                 }
 
                 self.historyStore.update(entry.updating(urlString: url.absoluteString, reference: reference))
+                self.activeDocument = nil
                 self.activeVideo = VideoPresentation(title: entry.title, url: url)
             }
         }
@@ -667,6 +824,7 @@ final class AppState: ObservableObject {
         selectedJournal = selectedJournal.flatMap { previous in
             journals.first(where: { $0.id == previous.id })
         } ?? journals.first
+        pendingJournalNavigationID = nil
         journalIssues = []
         selectedIssue = nil
         articles = []
@@ -736,6 +894,7 @@ final class AppState: ObservableObject {
         dashboard = DashboardSnapshot()
         journals = []
         selectedJournal = nil
+        pendingJournalNavigationID = nil
         journalIssues = []
         selectedIssue = nil
         articles = []
@@ -754,6 +913,8 @@ final class AppState: ObservableObject {
         videoSetReturnSection = nil
         searchResults = SearchResults()
         profile = nil
+        activeDocument = nil
+        activeVideo = nil
         isLoadingJournalIssues = false
         isLoadingArticles = false
         isLoadingChapters = false
@@ -761,6 +922,16 @@ final class AppState: ObservableObject {
         hasLoadedVideoSetCatalog = false
         isRefreshingHistory = false
         hasLoadedHistory = false
+        clearScopedLibraryFilters()
+        preferredHistoryPageRawValue = PreferredHistoryPage.all.rawValue
+        historyNavigationToken = UUID()
+        profileSelectedDetailSectionRawValue = nil
+    }
+
+    private func clearScopedLibraryFilters() {
+        journalsFavoritesOnly = false
+        booksFavoritesOnly = false
+        videoSetsFavoritesOnly = false
     }
 
     private func requireSession() throws -> SessionInfo {

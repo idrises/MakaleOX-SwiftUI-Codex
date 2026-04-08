@@ -7,6 +7,9 @@ private enum VideoSetsLayoutMode: String {
 
 struct VideoSetsScreen: View {
     @EnvironmentObject private var appState: AppState
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
     @AppStorage("videoSets.layout.mode") private var layoutModeRawValue = VideoSetsLayoutMode.list.rawValue
     @State private var searchText = ""
     @State private var activeSet: VideoSet?
@@ -20,6 +23,11 @@ struct VideoSetsScreen: View {
             .onChange(of: appState.pendingVideoSetNavigationID) { _ in
                 consumePendingNavigation()
             }
+            .onChange(of: appState.videoSetsFavoritesOnly) { isActive in
+                if isActive {
+                    searchText = ""
+                }
+            }
     }
 
     private var videoSetPane: some View {
@@ -27,12 +35,17 @@ struct VideoSetsScreen: View {
             if let activeSet {
                 VideoSetDetailPage(
                     set: activeSet,
-                    backTitle: appState.videoSetReturnSection == .dashboard ? "Back To Dashboard" : "Back To Video Sets",
+                    backTitle: videoSetBackTitle,
                     onBack: {
                         self.activeSet = nil
                         if appState.videoSetReturnSection == .dashboard {
                             appState.videoSetReturnSection = nil
                             appState.selectedSection = .dashboard
+                            return
+                        } else if appState.videoSetReturnSection == .profile {
+                            appState.videoSetReturnSection = nil
+                            appState.pendingVideoSetNavigationID = nil
+                            appState.selectedSection = .profile
                             return
                         }
                         guard !appState.hasLoadedVideoSetCatalog else { return }
@@ -69,6 +82,17 @@ struct VideoSetsScreen: View {
                         .buttonStyle(.bordered)
                     }
 
+                    if appState.videoSetsFavoritesOnly {
+                        HStack(spacing: 10) {
+                            StatusPill(text: "Favorites only", tint: Palette.accent)
+                            Button("Show All") {
+                                appState.videoSetsFavoritesOnly = false
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+
                     if filteredVideoSets.isEmpty {
                         EmptyStateView(
                             title: appState.videoSets.isEmpty ? "No video sets loaded" : "No video sets matched",
@@ -93,6 +117,20 @@ struct VideoSetsScreen: View {
         VideoSetsLayoutMode(rawValue: layoutModeRawValue) ?? .list
     }
 
+    private var videoSetBackTitle: String {
+        switch appState.videoSetReturnSection {
+        case .dashboard:
+            return "Back To Dashboard"
+        case .profile:
+            if appState.profileSelectedDetailSectionRawValue == ProfileDetailSection.favoriteVideoSets.rawValue {
+                return "Back To Favorite Sets"
+            }
+            return "Back To Profile"
+        default:
+            return "Back To Video Sets"
+        }
+    }
+
     private var listContent: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
@@ -106,7 +144,7 @@ struct VideoSetsScreen: View {
     private var galleryContent: some View {
         ScrollView {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 304, maximum: 354), spacing: 10, alignment: .top)],
+                columns: [GridItem(.adaptive(minimum: galleryCardMinimumWidth, maximum: galleryCardMaximumWidth), spacing: 10, alignment: .top)],
                 spacing: 10
             ) {
                 ForEach(filteredVideoSets, id: \.id) { set in
@@ -172,9 +210,12 @@ struct VideoSetsScreen: View {
     }
 
     private var filteredVideoSets: [VideoSet] {
+        let scopedSets = appState.videoSets.filter { set in
+            !appState.videoSetsFavoritesOnly || appState.favoritesStore.isFavorite(videoSet: set)
+        }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return appState.videoSets }
-        return appState.videoSets.filter {
+        guard !query.isEmpty else { return scopedSets }
+        return scopedSets.filter {
             [$0.setName, $0.editors, $0.subject]
                 .joined(separator: " ")
                 .matchesNormalizedSearch(query)
@@ -188,9 +229,25 @@ struct VideoSetsScreen: View {
         activeSet = selectedSet
         appState.pendingVideoSetNavigationID = nil
     }
+
+    private var galleryCardMinimumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 224 : 280
+#else
+        304
+#endif
+    }
+
+    private var galleryCardMaximumWidth: CGFloat {
+#if os(iOS)
+        horizontalSizeClass == .regular ? 260 : 332
+#else
+        354
+#endif
+    }
 }
 
-private struct VideoSetDetailPage: View {
+struct VideoSetDetailPage: View {
     @EnvironmentObject private var appState: AppState
 
     let set: VideoSet
@@ -232,7 +289,13 @@ private struct VideoSetDetailPage: View {
                 .buttonStyle(.bordered)
             }
 
-            if appState.selectedVideoSet?.id != set.id || appState.isLoadingVideoSetEntries {
+            if appState.selectedVideoSet?.id != set.id {
+                EmptyStateView(
+                    title: "Loading set entries",
+                    message: "The selected collection is being prepared.",
+                    symbolName: "play.square.stack"
+                )
+            } else if visibleEntries.isEmpty, appState.isLoadingVideoSetEntries {
                 EmptyStateView(
                     title: "Loading set entries",
                     message: "The selected collection is being prepared.",

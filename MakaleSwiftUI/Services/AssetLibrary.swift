@@ -32,7 +32,15 @@ final class AssetLibrary {
         do {
             return try LegacyConfig.applicationSupportDirectory()
         } catch {
+#if os(macOS)
             return fileManager.homeDirectoryForCurrentUser.appendingPathComponent("MakaleSwiftUIData", isDirectory: true)
+#else
+            let fallbackBase =
+                fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ??
+                fileManager.urls(for: .documentDirectory, in: .userDomainMask).first ??
+                fileManager.temporaryDirectory
+            return fallbackBase.appendingPathComponent("MakaleSwiftUIData", isDirectory: true)
+#endif
         }
     }()
 

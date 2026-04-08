@@ -3,6 +3,14 @@
 Build/
 BuildArm64/
 DerivedData/
+BuildCheck-ios/
+BuildCheck-ios2/
+BuildCheck-ios-arm64/
+BuildCheck-mac/
+BuildiPhone/
+
+Design/**/Previews/
+*.swp
 
 *.xcuserstate
 *.moved-aside

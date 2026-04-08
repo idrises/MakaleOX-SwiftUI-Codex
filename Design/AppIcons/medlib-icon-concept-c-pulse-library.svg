@@ -1,0 +1,39 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgC" x1="102" y1="114" x2="914" y2="936" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FAF6EF"/>
+      <stop offset="1" stop-color="#E8F2ED"/>
+    </linearGradient>
+    <linearGradient id="tileC" x1="302" y1="258" x2="722" y2="774" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1A6A63"/>
+      <stop offset="1" stop-color="#0F474C"/>
+    </linearGradient>
+    <filter id="shadowC" x="216" y="196" width="592" height="632" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="18"/>
+      <feGaussianBlur stdDeviation="26"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0392157 0 0 0 0 0.239216 0 0 0 0 0.223529 0 0 0 0.18 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <rect x="40" y="40" width="944" height="944" rx="216" fill="url(#bgC)"/>
+  <circle cx="798" cy="816" r="84" fill="#F4EDE0"/>
+
+  <g filter="url(#shadowC)">
+    <rect x="268" y="248" width="488" height="540" rx="144" fill="url(#tileC)"/>
+  </g>
+
+  <rect x="366" y="332" width="66" height="298" rx="22" fill="#F7FBF9"/>
+  <rect x="458" y="296" width="66" height="334" rx="22" fill="#E7F4EE"/>
+  <rect x="550" y="360" width="66" height="270" rx="22" fill="#F7FBF9"/>
+  <rect x="642" y="324" width="66" height="306" rx="22" fill="#D8ECE5"/>
+
+  <path d="M328 548H432L470 468L528 608L584 514H704" stroke="#F28C6E" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="326" cy="548" r="18" fill="#F28C6E"/>
+  <circle cx="706" cy="548" r="18" fill="#F28C6E"/>
+
+  <rect x="344" y="680" width="336" height="20" rx="10" fill="#3C8E7A"/>
+</svg>
