@@ -492,9 +492,22 @@ final class LegacyRepository {
                     FROM MAKALE
                     WHERE MAKALE = recentArticleHistory.Article
                         AND dergi = recentArticleHistory.Journal
-                        AND (recentArticleHistory.year = '' OR YIL = recentArticleHistory.year)
-                        AND (recentArticleHistory.volume = '' OR VOLUME = recentArticleHistory.volume)
-                    ORDER BY YIL DESC, VOLUME DESC
+                    ORDER BY
+                        CASE
+                            WHEN recentArticleHistory.year <> ''
+                                AND YIL = recentArticleHistory.year
+                            THEN 0
+                            ELSE 1
+                        END,
+                        CASE
+                            WHEN recentArticleHistory.volume <> ''
+                                AND VOLUME = recentArticleHistory.volume
+                            THEN 0
+                            ELSE 1
+                        END,
+                        createDate DESC,
+                        YIL DESC,
+                        VOLUME DESC
                 ) AS resolved
                 ORDER BY recentArticleHistory.[date] DESC
                 """,
