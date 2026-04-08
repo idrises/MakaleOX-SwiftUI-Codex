@@ -1,4 +1,5 @@
 #if os(iOS)
+import PhotosUI
 import SwiftUI
 
 private enum PhoneRootTab: String, CaseIterable, Identifiable {
@@ -996,6 +997,7 @@ private func phonePlaybackRecord(for entry: HistoryEntry, using store: VideoPlay
 
 private struct PhoneDashboardScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var profileAvatarStore: ProfileAvatarStore
     @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
     @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @State private var destination: PhoneDashboardDestination?
@@ -1025,20 +1027,31 @@ private struct PhoneDashboardScreen: View {
         PhonePageScroll {
             if let session = appState.session {
                 PhoneSurfaceCard {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .top, spacing: 8) {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Welcome back")
+                                Text("Welcome")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .foregroundStyle(Palette.highlight)
                                 Text(AppBranding.title)
                                     .font(.system(size: 22, weight: .bold, design: .rounded))
                                     .foregroundStyle(Palette.ink)
-                                Text(session.subject.isEmpty ? session.displayName : session.subject)
+                                Text(session.displayName)
                                     .font(.system(size: 12, weight: .medium, design: .rounded))
                                     .foregroundStyle(Palette.muted)
                                     .lineLimit(2)
                             }
+
+                            Spacer(minLength: 0)
+
+                            PhoneDashboardAvatarPicker(session: session)
+                                .environmentObject(profileAvatarStore)
+                        }
+
+                        HStack(alignment: .bottom, spacing: 10) {
+                            Text(session.expireDate.isEmpty ? "" : "Renew date \(session.expireDate)")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundStyle(Palette.muted)
 
                             Spacer(minLength: 0)
 
@@ -1047,12 +1060,8 @@ private struct PhoneDashboardScreen: View {
                                 .foregroundStyle(session.isExpired ? Palette.danger : Palette.accent)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 5)
-                                .background((session.isExpired ? Palette.danger : Palette.accent).opacity(0.1), in: Capsule())
+                                .background((session.isExpired ? Palette.danger : Palette.accent).opacity(0.10), in: Capsule())
                         }
-
-                        Text(session.expireDate.isEmpty ? "" : "Until \(session.expireDate)")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                            .foregroundStyle(Palette.muted)
                     }
                 }
             }
@@ -1293,6 +1302,71 @@ private struct PhoneDashboardScreen: View {
             }
         case .downloaded(_), .failed(_), .notDownloaded:
             return nil
+        }
+    }
+}
+
+private struct PhoneDashboardAvatarPicker: View {
+    @EnvironmentObject private var profileAvatarStore: ProfileAvatarStore
+    @State private var selectedItem: PhotosPickerItem?
+
+    let session: SessionInfo
+
+    var body: some View {
+        PhotosPicker(selection: $selectedItem, matching: .images) {
+            ZStack(alignment: .bottomTrailing) {
+                avatarImage
+                    .frame(width: 56, height: 56)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.88), lineWidth: 2)
+                    )
+                    .shadow(color: .black.opacity(0.10), radius: 10, y: 4)
+
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .frame(width: 20, height: 20)
+                    .background(Palette.accent, in: Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.9), lineWidth: 1)
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .onChange(of: selectedItem) { _, newValue in
+            guard let newValue else { return }
+            Task {
+                guard let data = try? await newValue.loadTransferable(type: Data.self) else { return }
+                profileAvatarStore.saveAvatarData(data, for: session)
+                selectedItem = nil
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var avatarImage: some View {
+        if let data = profileAvatarStore.imageData(for: session),
+           let image = UIImage(data: data) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Palette.accentSoft, Color.white],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundStyle(Palette.accent)
+            }
         }
     }
 }

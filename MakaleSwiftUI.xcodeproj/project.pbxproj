@@ -78,14 +78,17 @@
 		9C09A8FBD8AF210B7C905F74 /* HistoryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA233BF698152BF3507B7C1C /* HistoryScreen.swift */; };
 		A1C726CF67243B75B6C17DAA /* SQLClient.m in Sources */ = {isa = PBXBuildFile; fileRef = 91748B548B2A2034DABDA121 /* SQLClient.m */; };
 		A33390D43F6A04683226C5BB /* IPhoneExperience.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37C80F937AB517ABA415566 /* IPhoneExperience.swift */; };
+		A4121CCC8C8BFF2F4FC75E93 /* ProfileAvatarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436CE6725802CD8DB8B30CD4 /* ProfileAvatarStore.swift */; };
 		A9BC833BDE3EF9B9ADA8D278 /* LegacyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */; };
 		B1D6F92E69A97FDD43DE69DD /* BooksScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6531A7715AB9E3E25BD542E /* BooksScreen.swift */; };
 		B33B640511FC6F64492A3FD2 /* MakaleSwiftUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */; };
 		B5B130D56DEFE5F50225E793 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */; };
 		BB70114EC8DEBD0A4009F685 /* BackgroundDownloadAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F6A8F8E25068CE523F8784 /* BackgroundDownloadAppDelegate.swift */; };
+		C2889BEE26F4CE5CE7361B61 /* ProfileAvatarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436CE6725802CD8DB8B30CD4 /* ProfileAvatarStore.swift */; };
 		C2B83D695EBA357C61D6C09C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 611636CBAA8D6D46CE10F1E8 /* Assets.xcassets */; };
 		C53CC25A34B9491E400CEF97 /* LegacyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */; };
 		C829F7F98CBCA0991004CA13 /* SearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */; };
+		CA2EDEDC98A85663459019FC /* ProfileAvatarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436CE6725802CD8DB8B30CD4 /* ProfileAvatarStore.swift */; };
 		CB75DE48370A72CD82D6E77E /* libfreetds-prebuilt-x86_64-legacy.a in Resources */ = {isa = PBXBuildFile; fileRef = 17A2B8024F62FCAB189B5E12 /* libfreetds-prebuilt-x86_64-legacy.a */; };
 		CB83BA92939D31BA1729C259 /* VideoDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B55AAF6933C5353CA204ED9 /* VideoDownloadManager.swift */; };
 		CCCADCC2A5905BBCF1CB273E /* SQLClient.m in Sources */ = {isa = PBXBuildFile; fileRef = 91748B548B2A2034DABDA121 /* SQLClient.m */; };
@@ -131,6 +134,7 @@
 		2D20BE3C222ED2107886EBCB /* MainShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainShellView.swift; sourceTree = "<group>"; };
 		32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLGateway.swift; sourceTree = "<group>"; };
 		366A6488F1212CE5289889CB /* JournalsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsScreen.swift; sourceTree = "<group>"; };
+		436CE6725802CD8DB8B30CD4 /* ProfileAvatarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarStore.swift; sourceTree = "<group>"; };
 		47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
 		4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakaleSwiftUIApp.swift; sourceTree = "<group>"; };
 		4B55AAF6933C5353CA204ED9 /* VideoDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoDownloadManager.swift; sourceTree = "<group>"; };
@@ -234,6 +238,7 @@
 				D90B78D1861F0144CEA428E3 /* AppState.swift */,
 				47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */,
 				1A0CD71DA73E0A4F89EE1F56 /* HistoryStore.swift */,
+				436CE6725802CD8DB8B30CD4 /* ProfileAvatarStore.swift */,
 				F18F9C747F6B2E0C8EA6EAC2 /* SessionStore.swift */,
 				1D9BE7DC22D04C97F861E4D4 /* VideoPlaybackStore.swift */,
 			);
@@ -506,6 +511,7 @@
 				0C4BCCF3435656871D986630 /* LegacyRepository.swift in Sources */,
 				54567ECA603067C8CD792B2E /* MainShellView.swift in Sources */,
 				67A174225D07E5EFA31EC451 /* MakaleSwiftUIApp.swift in Sources */,
+				C2889BEE26F4CE5CE7361B61 /* ProfileAvatarStore.swift in Sources */,
 				F63488528E718C40A9F2DDC1 /* ProfileScreen.swift in Sources */,
 				822604596DFB48DFA546B02E /* SQLClient.m in Sources */,
 				1F1B8B0D8BD6ECB7368A59B9 /* SQLGateway.swift in Sources */,
@@ -540,6 +546,7 @@
 				E701D061FD33C2CB52CC1A70 /* LegacyRepository.swift in Sources */,
 				8D55CC576AE46411D84EF36E /* MainShellView.swift in Sources */,
 				B33B640511FC6F64492A3FD2 /* MakaleSwiftUIApp.swift in Sources */,
+				A4121CCC8C8BFF2F4FC75E93 /* ProfileAvatarStore.swift in Sources */,
 				0696D86F03C08CF8746D3E5B /* ProfileScreen.swift in Sources */,
 				CCCADCC2A5905BBCF1CB273E /* SQLClient.m in Sources */,
 				95AEBF0A4C03D710365EE76B /* SQLGateway.swift in Sources */,
@@ -574,6 +581,7 @@
 				963A63242CE0D0C64E7613F5 /* LegacyRepository.swift in Sources */,
 				1DC237146F5E0081746D24F0 /* MainShellView.swift in Sources */,
 				248119B171A80408256734BB /* MakaleSwiftUIApp.swift in Sources */,
+				CA2EDEDC98A85663459019FC /* ProfileAvatarStore.swift in Sources */,
 				1604B8D26A47F85F98AD997C /* ProfileScreen.swift in Sources */,
 				A1C726CF67243B75B6C17DAA /* SQLClient.m in Sources */,
 				7E4CD5D703C5F8712577FAC6 /* SQLGateway.swift in Sources */,

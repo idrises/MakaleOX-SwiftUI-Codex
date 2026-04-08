@@ -5,6 +5,7 @@ struct MakaleSwiftUIApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var videoDownloadManager = VideoDownloadManager.shared
     @StateObject private var videoPlaybackStore = VideoPlaybackStore.shared
+    @StateObject private var profileAvatarStore = ProfileAvatarStore.shared
 #if os(iOS)
     @UIApplicationDelegateAdaptor(BackgroundDownloadAppDelegate.self) private var backgroundDownloadAppDelegate
 #endif
@@ -21,6 +22,7 @@ struct MakaleSwiftUIApp: App {
             .environmentObject(appState)
             .environmentObject(videoDownloadManager)
             .environmentObject(videoPlaybackStore)
+            .environmentObject(profileAvatarStore)
             .task {
                 await appState.bootstrap()
                 videoDownloadManager.restorePendingTasksIfNeeded()
@@ -56,6 +58,7 @@ struct MakaleSwiftUIApp: App {
                 .environmentObject(appState)
                 .environmentObject(videoDownloadManager)
                 .environmentObject(videoPlaybackStore)
+                .environmentObject(profileAvatarStore)
                 .alert(item: $appState.activeAlert) { alert in
                     Alert(
                         title: Text(alert.title),
@@ -71,6 +74,7 @@ struct MakaleSwiftUIApp: App {
                 .environmentObject(appState)
                 .environmentObject(videoDownloadManager)
                 .environmentObject(videoPlaybackStore)
+                .environmentObject(profileAvatarStore)
                 .alert(item: $appState.activeAlert) { alert in
                     Alert(
                         title: Text(alert.title),
