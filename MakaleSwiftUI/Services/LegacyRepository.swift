@@ -468,52 +468,7 @@ final class LegacyRepository {
 
         let articleRows: [SQLRow]
         if kind == nil || kind == .article {
-            articleRows = try await gateway.query(
-                """
-                WITH recentArticleHistory AS (
-                    SELECT TOP \(historyLimit) Article, Journal, year, volume, [date]
-                    FROM usersOpenedArticle
-                    WHERE usermail = ?
-                    ORDER BY [date] DESC
-                )
-                SELECT
-                    resolved.MAKALE AS currentTitle,
-                    resolved.YAZAR AS currentAuthor,
-                    resolved.dergi AS currentJournal,
-                    CONVERT(varchar(33), recentArticleHistory.[date], 126) AS openedAtText,
-                    resolved.DONEM AS issueTitle,
-                    resolved.YIL AS currentYear,
-                    resolved.VOLUME AS currentVolume,
-                    resolved.KLASOR AS folder,
-                    resolved.LINK AS pdfLink
-                FROM recentArticleHistory
-                CROSS APPLY (
-                    SELECT TOP 1 MAKALE, YAZAR, dergi, DONEM, YIL, VOLUME, KLASOR, LINK
-                    FROM MAKALE
-                    WHERE MAKALE = recentArticleHistory.Article
-                        AND dergi = recentArticleHistory.Journal
-                    ORDER BY
-                        CASE
-                            WHEN recentArticleHistory.year <> ''
-                                AND YIL = recentArticleHistory.year
-                            THEN 0
-                            ELSE 1
-                        END,
-                        CASE
-                            WHEN recentArticleHistory.volume <> ''
-                                AND VOLUME = recentArticleHistory.volume
-                            THEN 0
-                            ELSE 1
-                        END,
-                        createDate DESC,
-                        YIL DESC,
-                        VOLUME DESC
-                ) AS resolved
-                ORDER BY recentArticleHistory.[date] DESC
-                """,
-                parameters: [email],
-                timeout: 90
-            )
+            articleRows = try await fetchArticleHistory(email: email, limit: historyLimit)
         } else {
             articleRows = []
         }
@@ -751,11 +706,47 @@ final class LegacyRepository {
     }
 
     func recordArticleOpen(_ article: Article, email: String) async {
-        _ = try? await gateway.execute(
-            "INSERT INTO usersOpenedArticle (author, Article, Journal, year, date, usermail, volume, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            parameters: [article.author, article.title, article.journalName, article.year, Date(), email, article.volume, "Mac SwiftUI"],
-            timeout: 30
-        )
+        let parameters: [Any?] = [
+            article.author,
+            article.title,
+            article.journalName,
+            article.year,
+            Date(),
+            email,
+            article.volume,
+            "Mac SwiftUI",
+            article.issueTitle,
+            article.folder,
+            article.pdfLink
+        ]
+
+        do {
+            try await gateway.execute(
+                """
+                INSERT INTO usersOpenedArticle (
+                    author,
+                    Article,
+                    Journal,
+                    year,
+                    date,
+                    usermail,
+                    volume,
+                    platform,
+                    issueTitle,
+                    folder,
+                    pdfLink
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                parameters: parameters,
+                timeout: 30
+            )
+        } catch {
+            _ = try? await gateway.execute(
+                "INSERT INTO usersOpenedArticle (author, Article, Journal, year, date, usermail, volume, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                parameters: Array(parameters.prefix(8)),
+                timeout: 30
+            )
+        }
     }
 
     func recordChapterOpen(_ chapter: Chapter, email: String) async {
@@ -780,6 +771,121 @@ final class LegacyRepository {
             parameters: [email, entry.title, setName, entry.author, entry.editor],
             timeout: 30
         )
+    }
+
+    private func fetchArticleHistory(email: String, limit: Int) async throws -> [SQLRow] {
+        do {
+            return try await gateway.query(
+                articleHistoryQueryWithStoredReference(limit: limit),
+                parameters: [email],
+                timeout: 90
+            )
+        } catch {
+            return try await gateway.query(
+                legacyArticleHistoryQuery(limit: limit),
+                parameters: [email],
+                timeout: 90
+            )
+        }
+    }
+
+    private func articleHistoryQueryWithStoredReference(limit: Int) -> String {
+        """
+        WITH recentArticleHistory AS (
+            SELECT TOP \(limit)
+                Article,
+                Journal,
+                year,
+                volume,
+                [date],
+                COALESCE(author, '') AS historyAuthor,
+                COALESCE(issueTitle, '') AS historyIssueTitle,
+                COALESCE(folder, '') AS historyFolder,
+                COALESCE(pdfLink, '') AS historyPdfLink
+            FROM usersOpenedArticle
+            WHERE usermail = ?
+            ORDER BY [date] DESC
+        )
+        SELECT
+            COALESCE(NULLIF(resolved.MAKALE, ''), recentArticleHistory.Article) AS currentTitle,
+            COALESCE(NULLIF(resolved.YAZAR, ''), recentArticleHistory.historyAuthor) AS currentAuthor,
+            COALESCE(NULLIF(resolved.dergi, ''), recentArticleHistory.Journal) AS currentJournal,
+            CONVERT(varchar(33), recentArticleHistory.[date], 126) AS openedAtText,
+            COALESCE(NULLIF(resolved.DONEM, ''), recentArticleHistory.historyIssueTitle) AS issueTitle,
+            COALESCE(NULLIF(resolved.YIL, ''), recentArticleHistory.year) AS currentYear,
+            COALESCE(NULLIF(resolved.VOLUME, ''), recentArticleHistory.volume) AS currentVolume,
+            COALESCE(NULLIF(resolved.KLASOR, ''), recentArticleHistory.historyFolder) AS folder,
+            COALESCE(NULLIF(resolved.LINK, ''), recentArticleHistory.historyPdfLink) AS pdfLink
+        FROM recentArticleHistory
+        OUTER APPLY (
+            SELECT TOP 1 MAKALE, YAZAR, dergi, DONEM, YIL, VOLUME, KLASOR, LINK
+            FROM MAKALE
+            WHERE MAKALE = recentArticleHistory.Article
+                AND dergi = recentArticleHistory.Journal
+            ORDER BY
+                CASE
+                    WHEN recentArticleHistory.year <> ''
+                        AND YIL = recentArticleHistory.year
+                    THEN 0
+                    ELSE 1
+                END,
+                CASE
+                    WHEN recentArticleHistory.volume <> ''
+                        AND VOLUME = recentArticleHistory.volume
+                    THEN 0
+                    ELSE 1
+                END,
+                createDate DESC,
+                YIL DESC,
+                VOLUME DESC
+        ) AS resolved
+        ORDER BY recentArticleHistory.[date] DESC
+        """
+    }
+
+    private func legacyArticleHistoryQuery(limit: Int) -> String {
+        """
+        WITH recentArticleHistory AS (
+            SELECT TOP \(limit) Article, Journal, year, volume, [date]
+            FROM usersOpenedArticle
+            WHERE usermail = ?
+            ORDER BY [date] DESC
+        )
+        SELECT
+            resolved.MAKALE AS currentTitle,
+            resolved.YAZAR AS currentAuthor,
+            resolved.dergi AS currentJournal,
+            CONVERT(varchar(33), recentArticleHistory.[date], 126) AS openedAtText,
+            resolved.DONEM AS issueTitle,
+            resolved.YIL AS currentYear,
+            resolved.VOLUME AS currentVolume,
+            resolved.KLASOR AS folder,
+            resolved.LINK AS pdfLink
+        FROM recentArticleHistory
+        CROSS APPLY (
+            SELECT TOP 1 MAKALE, YAZAR, dergi, DONEM, YIL, VOLUME, KLASOR, LINK
+            FROM MAKALE
+            WHERE MAKALE = recentArticleHistory.Article
+                AND dergi = recentArticleHistory.Journal
+            ORDER BY
+                CASE
+                    WHEN recentArticleHistory.year <> ''
+                        AND YIL = recentArticleHistory.year
+                    THEN 0
+                    ELSE 1
+                END,
+                CASE
+                    WHEN recentArticleHistory.volume <> ''
+                        AND VOLUME = recentArticleHistory.volume
+                    THEN 0
+                    ELSE 1
+                END,
+                createDate DESC,
+                YIL DESC,
+                VOLUME DESC
+        ) AS resolved
+        ORDER BY recentArticleHistory.[date] DESC
+        """
     }
 
     private func count(_ sql: String, parameters: [Any?] = []) async throws -> Int {
