@@ -94,6 +94,8 @@ final class OpenEventStore: ObservableObject {
     private let storageKey = "MakaleSwiftUI.open-events"
     private let sentGracePeriod: TimeInterval = 120
     private let sentRetention: TimeInterval = 24 * 60 * 60
+    private let retryBaseDelay: TimeInterval = 10
+    private let retryMaxDelay: TimeInterval = 120
 
     init() {
         guard
@@ -141,11 +143,20 @@ final class OpenEventStore: ObservableObject {
     }
 
     func nextSyncCandidate(for email: String) -> OpenEventRecord? {
-        records
+        let now = Date()
+        return records
             .filter { record in
                 guard let payload = record.articlePayload else { return false }
                 guard payload.email == email else { return false }
-                return record.status == .pending || record.status == .failed
+                switch record.status {
+                case .pending:
+                    return true
+                case .failed:
+                    let lastAttemptAt = record.lastAttemptAt ?? .distantPast
+                    return now.timeIntervalSince(lastAttemptAt) >= retryDelay(for: record)
+                case .syncing, .sent:
+                    return false
+                }
             }
             .sorted { lhs, rhs in
                 if lhs.createdAt != rhs.createdAt {
@@ -186,6 +197,11 @@ final class OpenEventStore: ObservableObject {
         for index in records.indices where records[index].status == .syncing {
             records[index].status = .pending
         }
+    }
+
+    private func retryDelay(for record: OpenEventRecord) -> TimeInterval {
+        let retryExponent = max(0, min(record.retryCount - 1, 4))
+        return min(retryBaseDelay * pow(2, Double(retryExponent)), retryMaxDelay)
     }
 
     private func sortAndPersist() {

@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct SessionInfo: Codable, Equatable {
     let email: String
@@ -545,6 +548,7 @@ struct PendingArticleOpenPayload: Codable, Hashable {
     let volume: String
     let folder: String
     let pdfLink: String
+    let platform: String
 
     init(article: Article, email: String) {
         self.email = email
@@ -556,6 +560,22 @@ struct PendingArticleOpenPayload: Codable, Hashable {
         self.volume = article.volume
         self.folder = article.folder
         self.pdfLink = article.pdfLink
+        self.platform = Self.currentPlatform
+    }
+
+    private static var currentPlatform: String {
+        #if os(iOS)
+        switch UIDevice.current.userInterfaceIdiom {
+        case .pad:
+            return "iPad SwiftUI"
+        default:
+            return "iPhone SwiftUI"
+        }
+        #elseif os(macOS)
+        return "Mac SwiftUI"
+        #else
+        return "SwiftUI"
+        #endif
     }
 }
 

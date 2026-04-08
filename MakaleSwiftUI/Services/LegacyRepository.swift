@@ -29,7 +29,7 @@ final class LegacyRepository {
             Date(),
             payload.email,
             payload.volume,
-            "Mac SwiftUI",
+            payload.platform,
             payload.issueTitle,
             payload.folder,
             payload.pdfLink

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 private enum HistoryReopenError: LocalizedError {
     case unresolved
@@ -55,6 +56,7 @@ private enum SearchVideoRailCandidate {
 
 private actor OpenEventSyncService {
     private var isSyncing = false
+    private let logger = Logger(subsystem: "com.codex.MakaleSwiftUI", category: "OpenEventSync")
 
     func flushPendingEvents(
         email: String,
@@ -73,14 +75,17 @@ private actor OpenEventSyncService {
                 case .article:
                     guard let payload = event.articlePayload else {
                         await store.markFailed(id: event.id, errorDescription: "Missing article payload.")
+                        logger.error("Article open event \(event.id.uuidString, privacy: .public) missing payload.")
                         continue
                     }
                     try await repository.persistArticleOpen(payload)
+                    logger.log("Synced article open event \(event.id.uuidString, privacy: .public) for \(payload.email, privacy: .public).")
                 }
 
                 await store.markSent(id: event.id)
             } catch {
                 await store.markFailed(id: event.id, errorDescription: error.localizedDescription)
+                logger.error("Failed article open event \(event.id.uuidString, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -1535,6 +1540,7 @@ final class AppState: ObservableObject {
         let payload = PendingArticleOpenPayload(article: article, email: email)
         openEventStore.enqueue(.article(payload: payload, historyEntry: historyEntry))
         syncPendingOpenEventsInBackground()
+        schedulePendingOpenEventRetry()
     }
 
     private func mergeHistoryEntries(_ serverEntries: [HistoryEntry], kind: HistoryKind?, email: String) -> [HistoryEntry] {
@@ -1551,6 +1557,13 @@ final class AppState: ObservableObject {
                 store: self.openEventStore,
                 repository: self.repository
             )
+        }
+    }
+
+    private func schedulePendingOpenEventRetry() {
+        Task(priority: .background) { @MainActor in
+            try? await Task.sleep(for: .seconds(15))
+            self.syncPendingOpenEventsInBackground()
         }
     }
 }
