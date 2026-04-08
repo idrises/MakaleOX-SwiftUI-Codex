@@ -7,12 +7,14 @@ private enum VideoSetsLayoutMode: String {
 
 struct VideoSetsScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
     @AppStorage("videoSets.layout.mode") private var layoutModeRawValue = VideoSetsLayoutMode.list.rawValue
     @State private var searchText = ""
     @State private var activeSet: VideoSet?
+    @State private var showDownloadedOnly = false
 
     var body: some View {
         videoSetPane
@@ -64,6 +66,14 @@ struct VideoSetsScreen: View {
 
                         Spacer(minLength: 12)
 
+#if os(macOS)
+                        Button(showDownloadedOnly ? "Show Sets" : "Downloaded Videos") {
+                            showDownloadedOnly.toggle()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(showDownloadedOnly ? Palette.highlight : Palette.accent)
+#endif
+
                         Picker("Layout", selection: $layoutModeRawValue) {
                             Text("List").tag(VideoSetsLayoutMode.list.rawValue)
                             Text("Gallery").tag(VideoSetsLayoutMode.gallery.rawValue)
@@ -93,7 +103,13 @@ struct VideoSetsScreen: View {
                         }
                     }
 
-                    if filteredVideoSets.isEmpty {
+                    if visibleDownloadItems.isEmpty && showDownloadedOnly {
+                        EmptyStateView(
+                            title: "No downloaded set videos yet",
+                            message: "Saved set entries will appear here once they are downloaded for offline playback.",
+                            symbolName: "arrow.down.circle"
+                        )
+                    } else if filteredVideoSets.isEmpty && !showDownloadedOnly {
                         EmptyStateView(
                             title: appState.videoSets.isEmpty ? "No video sets loaded" : "No video sets matched",
                             message: appState.videoSets.isEmpty
@@ -134,8 +150,14 @@ struct VideoSetsScreen: View {
     private var listContent: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
-                ForEach(filteredVideoSets, id: \.id) { set in
-                    videoSetCard(set)
+                if showDownloadedOnly {
+                    ForEach(visibleDownloadItems, id: \.id) { item in
+                        downloadedSetEntryCard(item)
+                    }
+                } else {
+                    ForEach(filteredVideoSets, id: \.id) { set in
+                        videoSetCard(set)
+                    }
                 }
             }
         }
@@ -147,8 +169,14 @@ struct VideoSetsScreen: View {
                 columns: [GridItem(.adaptive(minimum: galleryCardMinimumWidth, maximum: galleryCardMaximumWidth), spacing: 10, alignment: .top)],
                 spacing: 10
             ) {
-                ForEach(filteredVideoSets, id: \.id) { set in
-                    videoSetCard(set)
+                if showDownloadedOnly {
+                    ForEach(visibleDownloadItems, id: \.id) { item in
+                        downloadedSetEntryCard(item)
+                    }
+                } else {
+                    ForEach(filteredVideoSets, id: \.id) { set in
+                        videoSetCard(set)
+                    }
                 }
             }
             .padding(.top, 2)
@@ -209,6 +237,51 @@ struct VideoSetsScreen: View {
         )
     }
 
+    @ViewBuilder
+    private func downloadedSetEntryCard(_ item: DownloadedVideoItem) -> some View {
+        Button {
+            appState.playDownloadedVideo(
+                item,
+                context: visibleDownloadItems,
+                railTitle: "Downloaded videos",
+                railSubtitle: "Available offline"
+            )
+        } label: {
+            CompactMediaRowCard(
+                artworkURLs: item.record.artworkURLs,
+                title: item.record.title,
+                artworkAspectRatio: 0.82,
+                artworkWidth: 84,
+                artworkHeight: 104,
+                titleSize: 12,
+                titleLineLimit: 2,
+                contentSpacing: 4
+            ) {
+                Text(item.record.sourceDetail.isEmpty ? item.record.detail : item.record.sourceDetail)
+                    .font(.custom("Avenir Next Regular", size: 9))
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(2)
+
+                Text(item.record.sourceName)
+                    .font(.custom("Avenir Next Medium", size: 8))
+                    .foregroundStyle(Palette.highlight)
+                    .lineLimit(1)
+            } footer: {
+                HStack(alignment: .center, spacing: 8) {
+                    StatusPill(text: "Offline", tint: Palette.accent)
+
+                    Spacer(minLength: 0)
+
+                    Text("Play downloaded")
+                        .font(.custom("Avenir Next Medium", size: 8))
+                        .foregroundStyle(Palette.muted)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     private var filteredVideoSets: [VideoSet] {
         let scopedSets = appState.videoSets.filter { set in
             !appState.videoSetsFavoritesOnly || appState.favoritesStore.isFavorite(videoSet: set)
@@ -219,6 +292,22 @@ struct VideoSetsScreen: View {
             [$0.setName, $0.editors, $0.subject]
                 .joined(separator: " ")
                 .matchesNormalizedSearch(query)
+        }
+    }
+
+    private var visibleDownloadItems: [DownloadedVideoItem] {
+        let downloadedItems = videoDownloadManager.downloadedItems(kind: .set)
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return downloadedItems }
+        return downloadedItems.filter {
+            [
+                $0.record.title,
+                $0.record.sourceName,
+                $0.record.sourceDetail,
+                $0.record.detail
+            ]
+            .joined(separator: " ")
+            .matchesNormalizedSearch(query)
         }
     }
 

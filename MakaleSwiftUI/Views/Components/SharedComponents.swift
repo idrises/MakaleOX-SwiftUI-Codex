@@ -798,6 +798,7 @@ struct DocumentViewerScreen: View {
 }
 
 struct VideoPlayerScreen: View {
+    @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
     let video: VideoPresentation
     let backLabel: String
     let onClose: () -> Void
@@ -849,7 +850,10 @@ struct VideoPlayerScreen: View {
                         .foregroundStyle(Palette.muted)
                 }
                 .buttonStyle(.plain)
+
                 Spacer()
+
+                downloadActionButton
             }
 
             ScreenHeader(
@@ -890,45 +894,50 @@ struct VideoPlayerScreen: View {
     }
 #else
     private var iosVideoBody: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color.black,
-                    Color(red: 0.05, green: 0.08, blue: 0.13),
-                    Color(red: 0.10, green: 0.18, blue: 0.18)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+        GeometryReader { proxy in
+            let topInset = max(proxy.safeAreaInsets.top, 12)
+            let bottomInset = max(proxy.safeAreaInsets.bottom, 18)
 
-            Circle()
-                .fill(Palette.accent.opacity(0.18))
-                .frame(width: 360, height: 360)
-                .blur(radius: 48)
-                .offset(x: -160, y: -280)
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color.black,
+                        Color(red: 0.05, green: 0.08, blue: 0.13),
+                        Color(red: 0.10, green: 0.18, blue: 0.18)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
                 .ignoresSafeArea()
 
-            Circle()
-                .fill(Palette.highlight.opacity(0.14))
-                .frame(width: 320, height: 320)
-                .blur(radius: 56)
-                .offset(x: 140, y: 320)
-                .ignoresSafeArea()
+                Circle()
+                    .fill(Palette.accent.opacity(0.18))
+                    .frame(width: 360, height: 360)
+                    .blur(radius: 48)
+                    .offset(x: -160, y: -280)
+                    .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 18) {
-                iosTopBar
-                iosTitleBlock
-                iosVideoSurface
-                iosMetadataPanel
-                if railItems.count > 1 {
-                    iosRelatedVideosRail
+                Circle()
+                    .fill(Palette.highlight.opacity(0.14))
+                    .frame(width: 320, height: 320)
+                    .blur(radius: 56)
+                    .offset(x: 140, y: 320)
+                    .ignoresSafeArea()
+
+                VStack(alignment: .leading, spacing: 18) {
+                    iosTopBar
+                    iosTitleBlock
+                    iosVideoSurface
+                    iosMetadataPanel
+                    if railItems.count > 1 {
+                        iosRelatedVideosRail
+                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                .padding(.horizontal, horizontalSizeClass == .regular ? 26 : 18)
+                .padding(.top, topInset + 6)
+                .padding(.bottom, bottomInset)
             }
-            .padding(.horizontal, horizontalSizeClass == .regular ? 26 : 18)
-            .padding(.top, 12)
-            .padding(.bottom, 18)
         }
     }
 
@@ -952,18 +961,20 @@ struct VideoPlayerScreen: View {
             .buttonStyle(.plain)
 
             Spacer(minLength: 0)
+
+            downloadActionButton
         }
     }
 
     private var iosTitleBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("PLAYING NOW")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: 10, weight: .medium, design: .rounded))
                 .tracking(1.5)
                 .foregroundStyle(Palette.highlight)
 
             Text(currentItem.title)
-                .font(.system(size: horizontalSizeClass == .regular ? 21 : 17, weight: .semibold, design: .rounded))
+                .font(.system(size: horizontalSizeClass == .regular ? 18 : 15, weight: .regular, design: .rounded))
                 .foregroundStyle(Color.white)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -1071,6 +1082,35 @@ struct VideoPlayerScreen: View {
     }
 #endif
 
+    private var currentDownloadState: VideoDownloadState {
+        videoDownloadManager.downloadState(for: currentItem)
+    }
+
+    @ViewBuilder
+    private var downloadActionButton: some View {
+        Button(action: performDownloadAction) {
+            Label(downloadButtonTitle, systemImage: downloadButtonSymbol)
+#if os(iOS)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(downloadButtonForegroundStyle)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(downloadButtonBackgroundColor)
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(downloadButtonBorderColor, lineWidth: 1)
+                )
+#else
+                .font(.custom("Avenir Next Demi Bold", size: 12))
+#endif
+        }
+        .buttonStyle(.plain)
+        .disabled(isDownloadActionDisabled)
+    }
+
     private var railItems: [VideoRailItem] {
         video.railItems.isEmpty ? [video.currentItem] : video.railItems
     }
@@ -1121,6 +1161,88 @@ struct VideoPlayerScreen: View {
 #else
         return 20
 #endif
+    }
+
+    private var downloadButtonTitle: String {
+        switch currentDownloadState {
+        case .notDownloaded:
+            return "Download"
+        case .queued:
+            return "Queued"
+        case .downloading(let status):
+            if let fraction = status.fractionCompleted {
+                return "\(Int((fraction * 100).rounded()))%"
+            }
+            return "Downloading"
+        case .downloaded:
+            return "Offline"
+        case .failed:
+            return "Retry"
+        }
+    }
+
+    private var downloadButtonSymbol: String {
+        switch currentDownloadState {
+        case .downloaded:
+            return "checkmark.circle.fill"
+        case .queued, .downloading:
+            return "arrow.down.circle"
+        case .failed:
+            return "arrow.clockwise.circle"
+        case .notDownloaded:
+            return "arrow.down.circle"
+        }
+    }
+
+    private var isDownloadActionDisabled: Bool {
+        switch currentDownloadState {
+        case .queued, .downloading, .downloaded:
+            return true
+        case .notDownloaded, .failed:
+            return false
+        }
+    }
+
+#if os(iOS)
+    private var downloadButtonBackgroundColor: Color {
+        switch currentDownloadState {
+        case .downloaded:
+            return Palette.accent.opacity(0.24)
+        case .queued, .downloading:
+            return Color.white.opacity(0.08)
+        case .failed:
+            return Palette.danger.opacity(0.22)
+        case .notDownloaded:
+            return Color.white.opacity(0.10)
+        }
+    }
+
+    private var downloadButtonBorderColor: Color {
+        switch currentDownloadState {
+        case .downloaded:
+            return Palette.accent.opacity(0.36)
+        case .queued, .downloading:
+            return Color.white.opacity(0.12)
+        case .failed:
+            return Palette.danger.opacity(0.34)
+        case .notDownloaded:
+            return Color.white.opacity(0.12)
+        }
+    }
+
+    private var downloadButtonForegroundStyle: Color {
+        switch currentDownloadState {
+        case .failed:
+            return Palette.danger
+        default:
+            return Color.white
+        }
+    }
+#endif
+
+    private func performDownloadAction() {
+        guard !isDownloadActionDisabled else { return }
+        videoDownloadManager.startDownload(for: currentItem)
     }
 }
 

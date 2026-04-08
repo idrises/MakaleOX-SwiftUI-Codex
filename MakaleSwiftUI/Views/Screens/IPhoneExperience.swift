@@ -773,6 +773,7 @@ private struct PhoneEmptyState: View {
 
 private struct PhoneDashboardScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
     @State private var destination: PhoneDashboardDestination?
 
     var body: some View {
@@ -884,6 +885,44 @@ private struct PhoneDashboardScreen: View {
             }
 
             phoneCarouselSection(
+                title: "Downloaded Content",
+                subtitle: "Videos saved on this device for offline playback."
+            ) {
+                if downloadedItems.isEmpty {
+                    PhoneEmptyState(
+                        title: "No downloads yet",
+                        message: "Saved videos and set entries will appear here once downloaded.",
+                        symbol: "arrow.down.circle"
+                    )
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(downloadedItems, id: \.id) { item in
+                                Button {
+                                    appState.playDownloadedVideo(
+                                        item,
+                                        context: downloadedItems,
+                                        railTitle: "Downloaded content",
+                                        railSubtitle: "Available offline"
+                                    )
+                                } label: {
+                                    PhoneCarouselCard(
+                                        artworkURLs: item.record.artworkURLs,
+                                        title: item.record.title,
+                                        subtitle: item.record.sourceName,
+                                        detail: item.record.sourceKind == .set ? "Video Set • Offline" : "Library Video • Offline",
+                                        actionTitle: "Play Offline",
+                                        action: nil
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+
+            phoneCarouselSection(
                 title: "Books",
                 subtitle: "Long-form references surfaced for your subject."
             ) {
@@ -968,6 +1007,10 @@ private struct PhoneDashboardScreen: View {
             PhoneDashboardMetric(title: "Videos", value: appState.dashboard.videoCount, tint: Palette.accent),
             PhoneDashboardMetric(title: "Sets", value: appState.dashboard.videoSetCount, tint: Palette.highlight)
         ]
+    }
+
+    private var downloadedItems: [DownloadedVideoItem] {
+        Array(videoDownloadManager.downloadedItems().prefix(10))
     }
 
     private func phoneCarouselSection<Content: View>(

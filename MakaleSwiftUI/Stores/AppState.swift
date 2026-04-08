@@ -103,6 +103,7 @@ final class AppState: ObservableObject {
     let sessionStore = SessionStore()
     let favoritesStore = FavoritesStore()
     let historyStore = HistoryStore()
+    let videoDownloadManager = VideoDownloadManager.shared
 
     private let repository = LegacyRepository()
     private let assetLibrary = AssetLibrary()
@@ -695,10 +696,11 @@ final class AppState: ObservableObject {
     private func playVideo(_ video: Video, railContext: VideoRailContext) async {
         guard let session else { return }
         guard validateSession(session) else { return }
-        guard let url = LegacyConfig.videoRemoteURL(bookJournal: video.bookJournal, link: video.remoteLink) else {
+        guard let remoteURL = LegacyConfig.videoRemoteURL(bookJournal: video.bookJournal, link: video.remoteLink) else {
             activeAlert = AppAlert(title: "Video URL Error", message: "The video link could not be created.")
             return
         }
+        let playbackURL = videoDownloadManager.playbackURL(for: remoteURL)
 
         await repository.recordVideoOpen(video, email: session.email)
         historyStore.add(
@@ -707,7 +709,7 @@ final class AppState: ObservableObject {
                 title: video.title,
                 subtitle: video.bookJournal,
                 detail: video.author,
-                urlString: url.absoluteString,
+                urlString: remoteURL.absoluteString,
                 coverURLString: LegacyConfig.videoCoverCandidates(name: video.imageLink).first?.absoluteString ?? "",
                 reference: .video(bookJournal: video.bookJournal, link: video.remoteLink)
             )
@@ -716,10 +718,10 @@ final class AppState: ObservableObject {
         switch railContext {
         case .source:
             let relatedVideos = await resolveRelatedVideos(for: video, session: session)
-            activeVideo = makeVideoPresentation(for: video, url: url, relatedVideos: relatedVideos)
+            activeVideo = makeVideoPresentation(for: video, url: playbackURL, relatedVideos: relatedVideos)
         case .search(let scope):
             activeVideo = makeSearchVideoPresentation(
-                currentItem: makeVideoRailItem(for: video, url: url),
+                currentItem: makeVideoRailItem(for: video, url: playbackURL),
                 scope: scope
             )
         }
@@ -773,10 +775,11 @@ final class AppState: ObservableObject {
             activeAlert = AppAlert(title: "Access Limited", message: "Your membership is not allowed to open this video set.")
             return
         }
-        guard let url = LegacyConfig.videoSetRemoteURL(setName: entry.setName, link: entry.remoteLink) else {
+        guard let remoteURL = LegacyConfig.videoSetRemoteURL(setName: entry.setName, link: entry.remoteLink) else {
             activeAlert = AppAlert(title: "Video URL Error", message: "The video link could not be created.")
             return
         }
+        let playbackURL = videoDownloadManager.playbackURL(for: remoteURL)
 
         await repository.recordVideoSetOpen(setName: set.setName, entry: entry, email: session.email)
         historyStore.add(
@@ -785,7 +788,7 @@ final class AppState: ObservableObject {
                 title: entry.title,
                 subtitle: entry.setName,
                 detail: entry.author,
-                urlString: url.absoluteString,
+                urlString: remoteURL.absoluteString,
                 coverURLString: LegacyConfig.videoCoverCandidates(name: entry.imageLink).first?.absoluteString ?? "",
                 reference: .videoSet(setName: entry.setName, link: entry.remoteLink)
             )
@@ -794,13 +797,35 @@ final class AppState: ObservableObject {
         switch railContext {
         case .source:
             let relatedEntries = await resolveRelatedVideoSetEntries(for: entry)
-            activeVideo = makeVideoPresentation(for: entry, url: url, relatedEntries: relatedEntries)
+            activeVideo = makeVideoPresentation(for: entry, url: playbackURL, relatedEntries: relatedEntries)
         case .search(let scope):
             activeVideo = makeSearchVideoPresentation(
-                currentItem: makeVideoRailItem(for: entry, url: url),
+                currentItem: makeVideoRailItem(for: entry, url: playbackURL),
                 scope: scope
             )
         }
+    }
+
+    func playDownloadedVideo(
+        _ item: DownloadedVideoItem,
+        context: [DownloadedVideoItem]? = nil,
+        railTitle: String = "Downloaded content",
+        railSubtitle: String = "Available offline"
+    ) {
+        if let session, !validateSession(session) {
+            return
+        }
+
+        let railItems = (context ?? videoDownloadManager.downloadedItems())
+            .map(\.railItem)
+
+        activeDocument = nil
+        activeVideo = makeVideoPresentation(
+            currentItem: item.railItem,
+            railItems: railItems,
+            railTitle: railTitle,
+            railSubtitle: railSubtitle
+        )
     }
 
     func reopenHistoryEntry(_ entry: HistoryEntry, historyContext: [HistoryEntry]? = nil) async {
@@ -1055,12 +1080,15 @@ final class AppState: ObservableObject {
     }
 
     private func makeVideoRailItem(for video: Video, url: URL? = nil) -> VideoRailItem {
-        VideoRailItem(
+        let remoteURL = LegacyConfig.videoRemoteURL(bookJournal: video.bookJournal, link: video.remoteLink)
+            ?? URL(fileURLWithPath: "/")
+        return VideoRailItem(
             id: video.id,
             title: video.title,
             subtitle: video.bookJournal,
             detail: [video.author, video.editor].filter { !$0.isEmpty }.joined(separator: " • "),
-            url: url ?? LegacyConfig.videoRemoteURL(bookJournal: video.bookJournal, link: video.remoteLink) ?? URL(fileURLWithPath: "/"),
+            url: url ?? videoDownloadManager.playbackURL(for: remoteURL),
+            remoteURL: remoteURL,
             artworkURLs: LegacyConfig.videoCoverCandidates(name: video.imageLink),
             sourceKind: .library,
             sourceName: video.bookJournal,
@@ -1069,12 +1097,15 @@ final class AppState: ObservableObject {
     }
 
     private func makeVideoRailItem(for entry: VideoSetEntry, url: URL? = nil) -> VideoRailItem {
-        VideoRailItem(
+        let remoteURL = LegacyConfig.videoSetRemoteURL(setName: entry.setName, link: entry.remoteLink)
+            ?? URL(fileURLWithPath: "/")
+        return VideoRailItem(
             id: entry.id,
             title: entry.title,
             subtitle: entry.setName,
             detail: [entry.author, entry.editor].filter { !$0.isEmpty }.joined(separator: " • "),
-            url: url ?? LegacyConfig.videoSetRemoteURL(setName: entry.setName, link: entry.remoteLink) ?? URL(fileURLWithPath: "/"),
+            url: url ?? videoDownloadManager.playbackURL(for: remoteURL),
+            remoteURL: remoteURL,
             artworkURLs: LegacyConfig.videoCoverCandidates(name: entry.imageLink),
             sourceKind: .set,
             sourceName: entry.setName,
@@ -1103,13 +1134,28 @@ final class AppState: ObservableObject {
         }()
 
         let artworkURLs = URL(string: entry.coverURLString).map { [$0] } ?? []
+        let remoteURL = {
+            switch reference?.kind {
+            case .video:
+                return LegacyConfig.videoRemoteURL(bookJournal: reference?.primary ?? "", link: reference?.secondary ?? "")
+            case .videoSet:
+                return LegacyConfig.videoSetRemoteURL(setName: reference?.primary ?? "", link: reference?.secondary ?? "")
+            default:
+                if url.isFileURL {
+                    return nil
+                }
+                return url
+            }
+        }() ?? url
+        let playbackURL = remoteURL.isFileURL ? remoteURL : videoDownloadManager.playbackURL(for: remoteURL)
 
         return VideoRailItem(
-            id: [sourceName, entry.title, url.absoluteString].joined(separator: "|"),
+            id: [sourceName, entry.title, remoteURL.absoluteString].joined(separator: "|"),
             title: entry.title,
             subtitle: sourceName,
             detail: entry.detail,
-            url: url,
+            url: playbackURL,
+            remoteURL: remoteURL,
             artworkURLs: artworkURLs,
             sourceKind: kind,
             sourceName: sourceName,

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		007861EF29AF69A005D0369C /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783655A2274AAEB98228996D /* AppModels.swift */; };
+		03DB88924CF3B0AD75C107EA /* VideoDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B55AAF6933C5353CA204ED9 /* VideoDownloadManager.swift */; };
 		05DA7C327D6C58F132FF1DC9 /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F09FC29612BA5727D4F31993 /* AVKit.framework */; };
 		0696D86F03C08CF8746D3E5B /* ProfileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0884B4DAAA7E60F85D3A8B6A /* ProfileScreen.swift */; };
 		06A80EE1F7781CC5F882B3ED /* AssetLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB633639932E13C782881309 /* AssetLibrary.swift */; };
@@ -31,6 +32,7 @@
 		248119B171A80408256734BB /* MakaleSwiftUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */; };
 		2805B078A20619B234A1FF38 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */; };
 		2896C5D9A8D39D5A55D782FA /* VideosScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5A2BDC5CF1ABF07D58B19C /* VideosScreen.swift */; };
+		2B77C7720BDC603A44FCC447 /* BackgroundDownloadAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F6A8F8E25068CE523F8784 /* BackgroundDownloadAppDelegate.swift */; };
 		2BC0703A11B9A6FF24E3BCBC /* libfreetds-universal-legacy.a in Resources */ = {isa = PBXBuildFile; fileRef = 122CF3C27BC2707CE77F3BD0 /* libfreetds-universal-legacy.a */; };
 		2C96D98B5E966D1AC54B0736 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D90B78D1861F0144CEA428E3 /* AppState.swift */; };
 		301EA72A4ADDF9AD6AD3A47E /* SearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */; };
@@ -55,6 +57,7 @@
 		74923377A7255281D6AE3A93 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0CD71DA73E0A4F89EE1F56 /* HistoryStore.swift */; };
 		74C55F10DA670D37493E80DB /* DashboardScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F23844E11B72C7DE6A53E8 /* DashboardScreen.swift */; };
 		75E06FE2DB80C6232E65D0B9 /* IPhoneExperience.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37C80F937AB517ABA415566 /* IPhoneExperience.swift */; };
+		76A9854F6744F990DA14C65A /* VideoDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B55AAF6933C5353CA204ED9 /* VideoDownloadManager.swift */; };
 		76D136E7877492A26051CAB9 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B121AF93C4684C5A72013A9 /* SharedComponents.swift */; };
 		7C62E1759E5BFF9D1B2D6EE2 /* VideosScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5A2BDC5CF1ABF07D58B19C /* VideosScreen.swift */; };
 		7C7FAC6172E554D465C79BBD /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B121AF93C4684C5A72013A9 /* SharedComponents.swift */; };
@@ -65,6 +68,7 @@
 		88187AB3A84A679D52869527 /* BooksScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6531A7715AB9E3E25BD542E /* BooksScreen.swift */; };
 		8D55CC576AE46411D84EF36E /* MainShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D20BE3C222ED2107886EBCB /* MainShellView.swift */; };
 		8E73AE63491E9B634BE5A45E /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0CD71DA73E0A4F89EE1F56 /* HistoryStore.swift */; };
+		94D541632384416A6D182BB1 /* BackgroundDownloadAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F6A8F8E25068CE523F8784 /* BackgroundDownloadAppDelegate.swift */; };
 		95AEBF0A4C03D710365EE76B /* SQLGateway.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */; };
 		963A63242CE0D0C64E7613F5 /* LegacyRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D543F3E5A2F2FD3C181DDC9 /* LegacyRepository.swift */; };
 		9754C59A7B401956CC18D299 /* ActivationScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B3F333CC282351C743897F /* ActivationScreen.swift */; };
@@ -75,10 +79,12 @@
 		B1D6F92E69A97FDD43DE69DD /* BooksScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6531A7715AB9E3E25BD542E /* BooksScreen.swift */; };
 		B33B640511FC6F64492A3FD2 /* MakaleSwiftUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */; };
 		B5B130D56DEFE5F50225E793 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */; };
+		BB70114EC8DEBD0A4009F685 /* BackgroundDownloadAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F6A8F8E25068CE523F8784 /* BackgroundDownloadAppDelegate.swift */; };
 		C2B83D695EBA357C61D6C09C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 611636CBAA8D6D46CE10F1E8 /* Assets.xcassets */; };
 		C53CC25A34B9491E400CEF97 /* LegacyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */; };
 		C829F7F98CBCA0991004CA13 /* SearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB76EF2545DFEFB52F768E2 /* SearchScreen.swift */; };
 		CB75DE48370A72CD82D6E77E /* libfreetds-prebuilt-x86_64-legacy.a in Resources */ = {isa = PBXBuildFile; fileRef = 17A2B8024F62FCAB189B5E12 /* libfreetds-prebuilt-x86_64-legacy.a */; };
+		CB83BA92939D31BA1729C259 /* VideoDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B55AAF6933C5353CA204ED9 /* VideoDownloadManager.swift */; };
 		CCCADCC2A5905BBCF1CB273E /* SQLClient.m in Sources */ = {isa = PBXBuildFile; fileRef = 91748B548B2A2034DABDA121 /* SQLClient.m */; };
 		CD6F86E76DAB7AD688A66766 /* JournalsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366A6488F1212CE5289889CB /* JournalsScreen.swift */; };
 		D4198F02D1156390280BCD67 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50D37E05C36A53B741FCED20 /* PDFKit.framework */; };
@@ -123,9 +129,11 @@
 		366A6488F1212CE5289889CB /* JournalsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsScreen.swift; sourceTree = "<group>"; };
 		47E51A4403DAD867E3CA1078 /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
 		4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakaleSwiftUIApp.swift; sourceTree = "<group>"; };
+		4B55AAF6933C5353CA204ED9 /* VideoDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoDownloadManager.swift; sourceTree = "<group>"; };
 		50D37E05C36A53B741FCED20 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		538FDA23ECB1C5E2F208C2AE /* sybdb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sybdb.h; sourceTree = "<group>"; };
 		5582D0637F69FD5F520ECE2D /* libfreetds-arm64-repacked.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libfreetds-arm64-repacked.a"; sourceTree = "<group>"; };
+		59F6A8F8E25068CE523F8784 /* BackgroundDownloadAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundDownloadAppDelegate.swift; sourceTree = "<group>"; };
 		611636CBAA8D6D46CE10F1E8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		69BE318F6FFA1AF8FBE47B34 /* SQLClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SQLClient.h; sourceTree = "<group>"; };
 		6A7F07A25A557444BF1A78F6 /* sqlfront.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sqlfront.h; sourceTree = "<group>"; };
@@ -231,6 +239,7 @@
 			isa = PBXGroup;
 			children = (
 				0F721052652E162B3148FCAF /* AppBranding.swift */,
+				59F6A8F8E25068CE523F8784 /* BackgroundDownloadAppDelegate.swift */,
 				EE844C13F3BED0C1F8F6041F /* MakaleSwiftUI-Bridging-Header.h */,
 				4A879C3427610BE897E16617 /* MakaleSwiftUIApp.swift */,
 			);
@@ -301,6 +310,7 @@
 				90C79A7FAD05D814FE25B795 /* LegacyConfig.swift */,
 				0D543F3E5A2F2FD3C181DDC9 /* LegacyRepository.swift */,
 				32FAF13D93A2ED165EF1A183 /* SQLGateway.swift */,
+				4B55AAF6933C5353CA204ED9 /* VideoDownloadManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -402,8 +412,8 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					055F5E20557DE702A1884F78 = {
-						DevelopmentTeam = T76DN37KU3;
-						ProvisioningStyle = Automatic;
+						DevelopmentTeam = TMXJRV424Y;
+						ProvisioningStyle = Manual;
 					};
 					F4F651E4093A6E7973C6C18D = {
 						DevelopmentTeam = T76DN37KU3;
@@ -479,6 +489,7 @@
 				70693F7A0D5629133B001490 /* AppModels.swift in Sources */,
 				2C96D98B5E966D1AC54B0736 /* AppState.swift in Sources */,
 				61B8B0A0D625E1CFDBA5DA14 /* AssetLibrary.swift in Sources */,
+				BB70114EC8DEBD0A4009F685 /* BackgroundDownloadAppDelegate.swift in Sources */,
 				88187AB3A84A679D52869527 /* BooksScreen.swift in Sources */,
 				0FB53082B71D7F035CDF8320 /* DashboardScreen.swift in Sources */,
 				B5B130D56DEFE5F50225E793 /* FavoritesStore.swift in Sources */,
@@ -496,6 +507,7 @@
 				60F7435DBB8ADCA0C42F2CE0 /* SearchScreen.swift in Sources */,
 				EEABE3076EB7A2945AFCACE3 /* SessionStore.swift in Sources */,
 				76D136E7877492A26051CAB9 /* SharedComponents.swift in Sources */,
+				76A9854F6744F990DA14C65A /* VideoDownloadManager.swift in Sources */,
 				5E6C383EF32DDE3C4801A7F9 /* VideoSetsScreen.swift in Sources */,
 				12A48ECB19ED6A7F10C03B2A /* VideosScreen.swift in Sources */,
 			);
@@ -510,6 +522,7 @@
 				1222D0DFEC54E3E5DE51848A /* AppModels.swift in Sources */,
 				DE0FDCCD228135EDD097F0F6 /* AppState.swift in Sources */,
 				06A80EE1F7781CC5F882B3ED /* AssetLibrary.swift in Sources */,
+				94D541632384416A6D182BB1 /* BackgroundDownloadAppDelegate.swift in Sources */,
 				0F23486B3B6944E75705270A /* BooksScreen.swift in Sources */,
 				F89BAE2D7A21EDDF0DD6F0A8 /* DashboardScreen.swift in Sources */,
 				EAFAA73EF916E1E74CE5D458 /* FavoritesStore.swift in Sources */,
@@ -527,6 +540,7 @@
 				C829F7F98CBCA0991004CA13 /* SearchScreen.swift in Sources */,
 				83DC18F7CBC884A6CA8179DE /* SessionStore.swift in Sources */,
 				7C7FAC6172E554D465C79BBD /* SharedComponents.swift in Sources */,
+				CB83BA92939D31BA1729C259 /* VideoDownloadManager.swift in Sources */,
 				088C7410CD719F732A9B3005 /* VideoSetsScreen.swift in Sources */,
 				2896C5D9A8D39D5A55D782FA /* VideosScreen.swift in Sources */,
 			);
@@ -541,6 +555,7 @@
 				007861EF29AF69A005D0369C /* AppModels.swift in Sources */,
 				395D84FA3AF0EFF75BF2BAA1 /* AppState.swift in Sources */,
 				F15B316FDFCE9AF649B99B44 /* AssetLibrary.swift in Sources */,
+				2B77C7720BDC603A44FCC447 /* BackgroundDownloadAppDelegate.swift in Sources */,
 				B1D6F92E69A97FDD43DE69DD /* BooksScreen.swift in Sources */,
 				74C55F10DA670D37493E80DB /* DashboardScreen.swift in Sources */,
 				2805B078A20619B234A1FF38 /* FavoritesStore.swift in Sources */,
@@ -558,6 +573,7 @@
 				301EA72A4ADDF9AD6AD3A47E /* SearchScreen.swift in Sources */,
 				44237EF3490C6C7CC3B8B20C /* SessionStore.swift in Sources */,
 				191334C905ECCB268DF29B8D /* SharedComponents.swift in Sources */,
+				03DB88924CF3B0AD75C107EA /* VideoDownloadManager.swift in Sources */,
 				D8078881521C0881E27992A4 /* VideoSetsScreen.swift in Sources */,
 				7C62E1759E5BFF9D1B2D6EE2 /* VideosScreen.swift in Sources */,
 			);
@@ -636,8 +652,8 @@
 				APP_DISPLAY_NAME = MedLib;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = T76DN37KU3;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = TMXJRV424Y;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
@@ -659,6 +675,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.codex.MakaleSwiftUI.iOS;
 				PRODUCT_NAME = MedLibKlinik;
+				PROVISIONING_PROFILE_SPECIFIER = "MedLib Academi";
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -777,8 +794,8 @@
 				APP_DISPLAY_NAME = MedLib;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = T76DN37KU3;
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = TMXJRV424Y;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/MakaleSwiftUI/SQLClient",
@@ -800,6 +817,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.codex.MakaleSwiftUI.iOS;
 				PRODUCT_NAME = MedLibKlinik;
+				PROVISIONING_PROFILE_SPECIFIER = "MedLib Academi";
 				SDKROOT = iphoneos;
 				SWIFT_OBJC_BRIDGING_HEADER = "MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h";
 				TARGETED_DEVICE_FAMILY = "1,2";

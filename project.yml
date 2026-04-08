@@ -70,9 +70,10 @@ targets:
         PRODUCT_NAME: MedLibKlinik
         APP_DISPLAY_NAME: MedLib
         APP_BRAND_TITLE: MedLib Clinic
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: T76DN37KU3
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: TMXJRV424Y
         CODE_SIGN_IDENTITY: Apple Development
+        PROVISIONING_PROFILE_SPECIFIER: MedLib Academi
         INFOPLIST_FILE: MakaleSwiftUI/Resources/Info-iOS.plist
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_OBJC_BRIDGING_HEADER: MakaleSwiftUI/App/MakaleSwiftUI-Bridging-Header.h

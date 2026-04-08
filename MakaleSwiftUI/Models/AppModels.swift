@@ -515,7 +515,7 @@ struct DocumentPresentation: Identifiable, Equatable {
     let url: URL
 }
 
-enum VideoSourceKind: String, Equatable {
+enum VideoSourceKind: String, Codable, Equatable {
     case library
     case set
 
@@ -553,10 +553,81 @@ struct VideoRailItem: Identifiable, Equatable {
     let subtitle: String
     let detail: String
     let url: URL
+    let remoteURL: URL
     let artworkURLs: [URL]
     let sourceKind: VideoSourceKind
     let sourceName: String
     let sourceDetail: String
+}
+
+struct VideoDownloadRecord: Identifiable, Codable, Equatable {
+    let id: String
+    var title: String
+    var subtitle: String
+    var detail: String
+    var remoteURLString: String
+    var artworkURLStrings: [String]
+    var sourceKind: VideoSourceKind
+    var sourceName: String
+    var sourceDetail: String
+    var localRelativePath: String?
+    var downloadedAt: Date?
+    var lastErrorMessage: String?
+
+    var remoteURL: URL? {
+        URL(string: remoteURLString)
+    }
+
+    var artworkURLs: [URL] {
+        artworkURLStrings.compactMap(URL.init(string:))
+    }
+
+    init(item: VideoRailItem) {
+        self.id = item.remoteURL.absoluteString
+        self.title = item.title
+        self.subtitle = item.subtitle
+        self.detail = item.detail
+        self.remoteURLString = item.remoteURL.absoluteString
+        self.artworkURLStrings = item.artworkURLs.map(\.absoluteString)
+        self.sourceKind = item.sourceKind
+        self.sourceName = item.sourceName
+        self.sourceDetail = item.sourceDetail
+        self.localRelativePath = nil
+        self.downloadedAt = nil
+        self.lastErrorMessage = nil
+    }
+}
+
+struct DownloadedVideoItem: Identifiable, Equatable {
+    let record: VideoDownloadRecord
+    let localURL: URL
+
+    var id: String { record.id }
+
+    var railItem: VideoRailItem {
+        VideoRailItem(
+            id: record.id,
+            title: record.title,
+            subtitle: record.subtitle,
+            detail: record.detail,
+            url: localURL,
+            remoteURL: record.remoteURL ?? localURL,
+            artworkURLs: record.artworkURLs,
+            sourceKind: record.sourceKind,
+            sourceName: record.sourceName,
+            sourceDetail: record.sourceDetail
+        )
+    }
+
+    var downloadedAt: Date? { record.downloadedAt }
+}
+
+enum VideoDownloadState: Equatable {
+    case notDownloaded
+    case queued
+    case downloading(DownloadStatus)
+    case downloaded(URL)
+    case failed(String)
 }
 
 struct VideoPresentation: Identifiable, Equatable {

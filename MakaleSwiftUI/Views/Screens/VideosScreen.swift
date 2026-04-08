@@ -7,11 +7,13 @@ private enum VideosLayoutMode: String {
 
 struct VideosScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
     @AppStorage("videos.layout.mode") private var layoutModeRawValue = VideosLayoutMode.list.rawValue
     @State private var searchText = ""
+    @State private var showDownloadedOnly = false
 
     var body: some View {
         videoPane
@@ -29,6 +31,14 @@ struct VideosScreen: View {
                     )
 
                     Spacer(minLength: 12)
+
+#if os(macOS)
+                    Button(showDownloadedOnly ? "Show All" : "Downloaded Videos") {
+                        showDownloadedOnly.toggle()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(showDownloadedOnly ? Palette.highlight : Palette.accent)
+#endif
 
                     Picker("Layout", selection: $layoutModeRawValue) {
                         Text("List").tag(VideosLayoutMode.list.rawValue)
@@ -48,7 +58,13 @@ struct VideosScreen: View {
                     .buttonStyle(.bordered)
                 }
 
-                if filteredVideos.isEmpty {
+                if visibleDownloadItems.isEmpty && showDownloadedOnly {
+                    EmptyStateView(
+                        title: "No downloaded videos yet",
+                        message: "Downloaded videos will appear here and stay playable offline.",
+                        symbolName: "arrow.down.circle"
+                    )
+                } else if filteredVideos.isEmpty && !showDownloadedOnly {
                     EmptyStateView(
                         title: appState.videos.isEmpty ? "No videos loaded" : "No videos matched",
                         message: appState.videos.isEmpty
@@ -74,8 +90,14 @@ struct VideosScreen: View {
     private var listContent: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
-                ForEach(filteredVideos, id: \.id) { video in
-                    videoCard(video)
+                if showDownloadedOnly {
+                    ForEach(visibleDownloadItems, id: \.id) { item in
+                        downloadedVideoCard(item)
+                    }
+                } else {
+                    ForEach(filteredVideos, id: \.id) { video in
+                        videoCard(video)
+                    }
                 }
             }
         }
@@ -87,8 +109,14 @@ struct VideosScreen: View {
                 columns: [GridItem(.adaptive(minimum: galleryCardMinimumWidth, maximum: galleryCardMaximumWidth), spacing: 10, alignment: .top)],
                 spacing: 10
             ) {
-                ForEach(filteredVideos, id: \.id) { video in
-                    videoCard(video)
+                if showDownloadedOnly {
+                    ForEach(visibleDownloadItems, id: \.id) { item in
+                        downloadedVideoCard(item)
+                    }
+                } else {
+                    ForEach(filteredVideos, id: \.id) { video in
+                        videoCard(video)
+                    }
                 }
             }
             .padding(.top, 2)
@@ -135,6 +163,51 @@ struct VideosScreen: View {
         .buttonStyle(.plain)
     }
 
+    @ViewBuilder
+    private func downloadedVideoCard(_ item: DownloadedVideoItem) -> some View {
+        Button {
+            appState.playDownloadedVideo(
+                item,
+                context: visibleDownloadItems,
+                railTitle: "Downloaded videos",
+                railSubtitle: "Available offline"
+            )
+        } label: {
+            CompactMediaRowCard(
+                artworkURLs: item.record.artworkURLs,
+                title: item.record.title,
+                artworkAspectRatio: 0.82,
+                artworkWidth: 84,
+                artworkHeight: 104,
+                titleSize: 12,
+                titleLineLimit: 2,
+                contentSpacing: 4
+            ) {
+                Text(item.record.sourceDetail.isEmpty ? item.record.detail : item.record.sourceDetail)
+                    .font(.custom("Avenir Next Regular", size: 9))
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(2)
+
+                Text(item.record.sourceName)
+                    .font(.custom("Avenir Next Medium", size: 8))
+                    .foregroundStyle(Palette.highlight)
+                    .lineLimit(1)
+            } footer: {
+                HStack(alignment: .center, spacing: 8) {
+                    StatusPill(text: "Offline", tint: Palette.accent)
+
+                    Spacer(minLength: 0)
+
+                    Text("Play downloaded")
+                        .font(.custom("Avenir Next Medium", size: 8))
+                        .foregroundStyle(Palette.muted)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     private var filteredVideos: [Video] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return appState.videos }
@@ -142,6 +215,22 @@ struct VideosScreen: View {
             [$0.title, $0.author, $0.bookJournal, $0.editor]
                 .joined(separator: " ")
                 .matchesNormalizedSearch(query)
+        }
+    }
+
+    private var visibleDownloadItems: [DownloadedVideoItem] {
+        let downloadedItems = videoDownloadManager.downloadedItems(kind: .library)
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return downloadedItems }
+        return downloadedItems.filter {
+            [
+                $0.record.title,
+                $0.record.sourceName,
+                $0.record.sourceDetail,
+                $0.record.detail
+            ]
+            .joined(separator: " ")
+            .matchesNormalizedSearch(query)
         }
     }
 
