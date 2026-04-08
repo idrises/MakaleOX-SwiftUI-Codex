@@ -10,6 +10,7 @@ struct MainShellView: View {
     #endif
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var splitViewVisibility: NavigationSplitViewVisibility = .all
     #endif
 
     var body: some View {
@@ -25,7 +26,7 @@ struct MainShellView: View {
     }
 
     private var splitShellView: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: splitViewVisibilityBinding) {
             AppCanvas {
                 VStack(alignment: .leading, spacing: 16) {
                     if let session = appState.session {
@@ -72,6 +73,17 @@ struct MainShellView: View {
             }
         }
         .toolbar {
+            #if os(iOS)
+            if shouldShowSplitHeaderMenuButton {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        splitViewVisibility = .all
+                    } label: {
+                        Label("Menu", systemImage: "sidebar.leading")
+                    }
+                }
+            }
+            #endif
             ToolbarItemGroup(placement: .automatic) {
                 Button {
                     Task { await appState.refreshCurrentSection() }
@@ -368,8 +380,19 @@ struct MainShellView: View {
     }
 
 #if os(iOS)
+    private var splitViewVisibilityBinding: Binding<NavigationSplitViewVisibility> {
+        Binding(
+            get: { splitViewVisibility },
+            set: { splitViewVisibility = $0 }
+        )
+    }
+
     private var isRegularIPadLayout: Bool {
         horizontalSizeClass == .regular
+    }
+
+    private var shouldShowSplitHeaderMenuButton: Bool {
+        isRegularIPadLayout && splitViewVisibility == .detailOnly
     }
 
     private var isCompactPhoneLayout: Bool {
@@ -396,6 +419,10 @@ struct MainShellView: View {
             get: { showsModalVideoPlayer ? appState.activeVideo : nil },
             set: { appState.activeVideo = $0 }
         )
+    }
+#else
+    private var splitViewVisibilityBinding: Binding<NavigationSplitViewVisibility> {
+        .constant(.all)
     }
 #endif
 }
