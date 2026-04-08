@@ -133,6 +133,16 @@ private enum PhoneCombinedSearchItem: Identifiable {
     }
 }
 
+private enum PhoneAppBranding {
+    static var dashboardTitle: String {
+        if let title = Bundle.main.object(forInfoDictionaryKey: "AppBrandTitle") as? String,
+           !title.isEmpty {
+            return title
+        }
+        return "MedLib"
+    }
+}
+
 struct IPhoneRootShellView: View {
     @EnvironmentObject private var appState: AppState
     @State private var rootTab: PhoneRootTab = .home
@@ -190,31 +200,19 @@ struct IPhoneRootShellView: View {
             Task { await appState.loadCurrentSectionIfNeeded() }
         }
         .fullScreenCover(item: phoneVideoBinding) { video in
-            PhoneCanvas()
-                .overlay {
-                    VideoPlayerScreen(
-                        video: video,
-                        backLabel: "Close",
-                        onClose: { appState.activeVideo = nil }
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 8)
-                }
+            VideoPlayerScreen(
+                video: video,
+                backLabel: "Close",
+                onClose: { appState.activeVideo = nil }
+            )
         }
         .fullScreenCover(item: phoneDocumentBinding) { document in
-            PhoneCanvas()
-                .overlay {
-                    DocumentViewerScreen(
-                        document: document,
-                        backLabel: "Close",
-                        showsMetadataHeader: false,
-                        onClose: { appState.activeDocument = nil }
-                    )
-                    .padding(.horizontal, 12)
-                    .padding(.top, 12)
-                    .padding(.bottom, 6)
-                }
+            DocumentViewerScreen(
+                document: document,
+                backLabel: "Close",
+                showsMetadataHeader: false,
+                onClose: { appState.activeDocument = nil }
+            )
         }
     }
 
@@ -363,20 +361,22 @@ private struct PhoneHeaderBlock<Trailing: View>: View {
 
 private struct PhoneSurfaceCard<Content: View>: View {
     let content: Content
+    let contentPadding: CGFloat
 
-    init(@ViewBuilder content: () -> Content) {
+    init(contentPadding: CGFloat = 14, @ViewBuilder content: () -> Content) {
         self.content = content()
+        self.contentPadding = contentPadding
     }
 
     var body: some View {
         content
-            .padding(16)
-            .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .padding(contentPadding)
+            .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.85), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.06), radius: 16, y: 8)
+            .shadow(color: .black.opacity(0.05), radius: 12, y: 6)
     }
 }
 
@@ -384,22 +384,150 @@ private struct PhoneMetricPill: View {
     let title: String
     let value: Int
     let tint: Color
+    var compact: Bool = false
+    var fillsAvailableWidth: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: fillsAvailableWidth ? .center : .leading, spacing: fillsAvailableWidth ? 3 : 4) {
             Text(title.uppercased())
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(size: compact ? (fillsAvailableWidth ? 6 : 7) : 9, weight: .bold, design: .rounded))
                 .tracking(0.8)
                 .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(fillsAvailableWidth ? 0.68 : 0.92)
+                .allowsTightening(true)
             Text(value.formatted(.number.grouping(.automatic)))
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(.system(size: compact ? (fillsAvailableWidth ? 14 : 17) : 21, weight: .bold, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(fillsAvailableWidth ? 0.72 : 0.92)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .frame(width: 146, alignment: .leading)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, fillsAvailableWidth ? 6 : compact ? 10 : 14)
+        .padding(.vertical, fillsAvailableWidth ? 8 : compact ? 9 : 12)
+        .frame(
+            minWidth: fillsAvailableWidth ? nil : compact ? 74 : 108,
+            maxWidth: fillsAvailableWidth ? .infinity : nil,
+            alignment: fillsAvailableWidth ? .center : .leading
+        )
+        .fixedSize(horizontal: !fillsAvailableWidth, vertical: false)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: compact ? 13 : 16, style: .continuous))
     }
+}
+
+private struct PhoneWrapLayout: Layout {
+    var spacing: CGFloat = 8
+    var rowSpacing: CGFloat = 8
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let rows = makeRows(for: proposal.width, sizes: sizes)
+        let width = rows.map(\.width).max() ?? 0
+        let height = rows.last.map { $0.yOffset + $0.height } ?? 0
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let rows = makeRows(for: bounds.width, sizes: sizes)
+
+        for row in rows {
+            for index in row.items.indices {
+                let origin = CGPoint(
+                    x: bounds.minX + row.xOffsets[index],
+                    y: bounds.minY + row.yOffset
+                )
+                subviews[row.items[index]].place(
+                    at: origin,
+                    proposal: ProposedViewSize(sizes[row.items[index]])
+                )
+            }
+        }
+    }
+
+    private func makeRows(for proposedWidth: CGFloat?, sizes: [CGSize]) -> [PhoneWrapRow] {
+        let availableWidth = proposedWidth ?? .infinity
+        guard !sizes.isEmpty else { return [] }
+
+        var rows: [PhoneWrapRow] = []
+        var currentItems: [Int] = []
+        var currentXOffsets: [CGFloat] = []
+        var currentWidth: CGFloat = 0
+        var currentHeight: CGFloat = 0
+        var currentY: CGFloat = 0
+
+        for (index, size) in sizes.enumerated() {
+            let proposedItemWidth = currentItems.isEmpty ? size.width : currentWidth + spacing + size.width
+
+            if !currentItems.isEmpty && proposedItemWidth > availableWidth {
+                rows.append(
+                    PhoneWrapRow(
+                        items: currentItems,
+                        xOffsets: currentXOffsets,
+                        yOffset: currentY,
+                        width: currentWidth,
+                        height: currentHeight
+                    )
+                )
+                currentY += currentHeight + rowSpacing
+                currentItems = []
+                currentXOffsets = []
+                currentWidth = 0
+                currentHeight = 0
+            }
+
+            let xOffset = currentItems.isEmpty ? 0 : currentWidth + spacing
+            currentItems.append(index)
+            currentXOffsets.append(xOffset)
+            currentWidth = xOffset + size.width
+            currentHeight = max(currentHeight, size.height)
+        }
+
+        if !currentItems.isEmpty {
+            rows.append(
+                PhoneWrapRow(
+                    items: currentItems,
+                    xOffsets: currentXOffsets,
+                    yOffset: currentY,
+                    width: currentWidth,
+                    height: currentHeight
+                )
+            )
+        }
+
+        return rows
+    }
+}
+
+private struct PhoneWrapRow {
+    let items: [Int]
+    let xOffsets: [CGFloat]
+    let yOffset: CGFloat
+    let width: CGFloat
+    let height: CGFloat
+}
+
+private struct PhoneDashboardMetric: Identifiable {
+    let title: String
+    let value: Int
+    let tint: Color
+
+    var id: String { title }
+}
+
+private enum PhoneDashboardDestination: Hashable {
+    case issue(JournalIssue)
+    case book(Book)
+    case videoSet(VideoSet)
 }
 
 private struct PhoneSectionHeader: View {
@@ -570,38 +698,50 @@ private struct PhoneCarouselCard: View {
     let actionTitle: String?
     let action: (() -> Void)?
 
+    private let artworkWidth: CGFloat = 132
+    private let artworkHeight: CGFloat = 104
+    private let cardInset: CGFloat = 10
+
     var body: some View {
-        PhoneSurfaceCard {
-            VStack(alignment: .leading, spacing: 12) {
-                RemoteArtworkView(urls: artworkURLs, aspectRatio: 1.2, cornerRadius: 18)
-                    .frame(height: 150)
+        PhoneSurfaceCard(contentPadding: cardInset) {
+            VStack(alignment: .leading, spacing: 6) {
+                RemoteArtworkView(
+                    urls: artworkURLs,
+                    aspectRatio: 1.2,
+                    cornerRadius: 15,
+                    imageAlignment: .top,
+                    imageContentMode: .fit,
+                    imagePadding: 4
+                )
+                    .frame(width: artworkWidth, height: artworkHeight)
+                    .clipped()
 
                 Text(title)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                     .lineLimit(2)
 
                 Text(subtitle)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundStyle(Palette.muted)
                     .lineLimit(2)
 
                 if !detail.isEmpty {
                     Text(detail)
-                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                        .font(.system(size: 9, weight: .regular, design: .rounded))
                         .foregroundStyle(Palette.highlight)
                         .lineLimit(2)
                 }
 
                 if let actionTitle, let action {
                     Button(actionTitle, action: action)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 7)
                         .background(Palette.accent, in: Capsule())
                 }
             }
-            .frame(width: 252, alignment: .leading)
+            .frame(width: artworkWidth, alignment: .leading)
         }
     }
 }
@@ -632,26 +772,60 @@ private struct PhoneEmptyState: View {
 
 private struct PhoneDashboardScreen: View {
     @EnvironmentObject private var appState: AppState
+    @State private var destination: PhoneDashboardDestination?
 
     var body: some View {
+        Group {
+            switch destination {
+            case .issue(let issue):
+                PhoneDashboardIssueDetailScreen(issue: issue) {
+                    destination = nil
+                }
+            case .book(let book):
+                PhoneDashboardBookDetailScreen(book: book) {
+                    destination = nil
+                }
+            case .videoSet(let set):
+                PhoneDashboardVideoSetDetailScreen(set: set) {
+                    destination = nil
+                }
+            case nil:
+                dashboardOverview
+            }
+        }
+    }
+
+    private var dashboardOverview: some View {
         PhonePageScroll {
             if let session = appState.session {
                 PhoneSurfaceCard {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Welcome back")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Palette.highlight)
-                        Text("MedLib")
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                        Text(session.subject.isEmpty ? session.displayName : session.subject)
-                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .top, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Welcome back")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Palette.highlight)
+                                Text(PhoneAppBranding.dashboardTitle)
+                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                Text(session.subject.isEmpty ? session.displayName : session.subject)
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Palette.muted)
+                                    .lineLimit(2)
+                            }
+
+                            Spacer(minLength: 0)
+
+                            Text(session.isExpired ? "Expired" : "Active")
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundStyle(session.isExpired ? Palette.danger : Palette.accent)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background((session.isExpired ? Palette.danger : Palette.accent).opacity(0.1), in: Capsule())
+                        }
+
+                        Text(session.expireDate.isEmpty ? "" : "Until \(session.expireDate)")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
                             .foregroundStyle(Palette.muted)
-                        Text(session.isExpired ? "Expired" : "Active until \(session.expireDate)")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundStyle(session.isExpired ? Palette.danger : Palette.accent)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background((session.isExpired ? Palette.danger : Palette.accent).opacity(0.1), in: Capsule())
                     }
                 }
             }
@@ -662,15 +836,18 @@ private struct PhoneDashboardScreen: View {
                 subtitle: "Quick entry points, smaller cards, and thumb-friendly browsing."
             )
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    PhoneMetricPill(title: "Journals", value: appState.dashboard.journalCount, tint: Palette.accent)
-                    PhoneMetricPill(title: "Articles", value: appState.dashboard.articleCount, tint: Palette.highlight)
-                    PhoneMetricPill(title: "Books", value: appState.dashboard.bookCount, tint: Palette.gold)
-                    PhoneMetricPill(title: "Videos", value: appState.dashboard.videoCount, tint: Palette.accent)
-                    PhoneMetricPill(title: "Sets", value: appState.dashboard.videoSetCount, tint: Palette.highlight)
+            HStack(spacing: 6) {
+                ForEach(metrics) { metric in
+                    PhoneMetricPill(
+                        title: metric.title,
+                        value: metric.value,
+                        tint: metric.tint,
+                        compact: true,
+                        fillsAvailableWidth: true
+                    )
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             phoneCarouselSection(
                 title: "Recent Issues",
@@ -684,10 +861,10 @@ private struct PhoneDashboardScreen: View {
                     )
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             ForEach(appState.dashboard.recentIssues, id: \.id) { issue in
                                 Button {
-                                    Task { await appState.showDashboardIssue(issue) }
+                                    destination = .issue(issue)
                                 } label: {
                                     PhoneCarouselCard(
                                         artworkURLs: LegacyConfig.issueCoverCandidates(journal: issue.journalName, issue: issue.title),
@@ -710,10 +887,10 @@ private struct PhoneDashboardScreen: View {
                 subtitle: "Long-form references surfaced for your subject."
             ) {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         ForEach(appState.dashboard.recentBooks, id: \.id) { book in
                             Button {
-                                Task { await appState.showDashboardBook(book) }
+                                destination = .book(book)
                             } label: {
                                 PhoneCarouselCard(
                                     artworkURLs: LegacyConfig.bookCoverCandidates(isbn: book.isbnOnline),
@@ -735,7 +912,7 @@ private struct PhoneDashboardScreen: View {
                 subtitle: "Tap directly into the most recent video materials."
             ) {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         ForEach(appState.dashboard.recentVideos, id: \.id) { video in
                             Button {
                                 Task { await appState.playVideo(video) }
@@ -760,10 +937,10 @@ private struct PhoneDashboardScreen: View {
                 subtitle: "Grouped collections you can open in one tap."
             ) {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         ForEach(appState.dashboard.recentVideoSets, id: \.id) { set in
                             Button {
-                                Task { await appState.showVideoSetCollection(set) }
+                                destination = .videoSet(set)
                             } label: {
                                 PhoneCarouselCard(
                                     artworkURLs: LegacyConfig.videoCoverCandidates(name: set.setName),
@@ -782,14 +959,306 @@ private struct PhoneDashboardScreen: View {
         }
     }
 
+    private var metrics: [PhoneDashboardMetric] {
+        [
+            PhoneDashboardMetric(title: "Journals", value: appState.dashboard.journalCount, tint: Palette.accent),
+            PhoneDashboardMetric(title: "Articles", value: appState.dashboard.articleCount, tint: Palette.highlight),
+            PhoneDashboardMetric(title: "Books", value: appState.dashboard.bookCount, tint: Palette.gold),
+            PhoneDashboardMetric(title: "Videos", value: appState.dashboard.videoCount, tint: Palette.accent),
+            PhoneDashboardMetric(title: "Sets", value: appState.dashboard.videoSetCount, tint: Palette.highlight)
+        ]
+    }
+
     private func phoneCarouselSection<Content: View>(
         title: String,
         subtitle: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             PhoneSectionHeader(title: title, subtitle: subtitle)
             content()
+        }
+    }
+}
+
+private struct PhoneDashboardIssueDetailScreen: View {
+    @EnvironmentObject private var appState: AppState
+
+    let issue: JournalIssue
+    let onBack: () -> Void
+
+    var body: some View {
+        PhonePageScroll {
+            PhoneHeaderBlock(
+                eyebrow: "Dashboard",
+                title: issue.title,
+                subtitle: issue.journalName
+            ) {
+                PhoneBackButton(label: "Dashboard", action: onBack)
+            }
+
+            PhoneSurfaceCard {
+                HStack(alignment: .top, spacing: 14) {
+                    RemoteArtworkView(
+                        urls: LegacyConfig.issueCoverCandidates(journal: issue.journalName, issue: issue.title),
+                        aspectRatio: 0.76,
+                        cornerRadius: 16
+                    )
+                    .frame(width: 86, height: 116)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        PhoneInfoLine(label: "Journal", value: issue.journalName)
+                        PhoneInfoLine(
+                            label: "Issue",
+                            value: [issue.year, issue.volume, issue.number]
+                                .filter { !$0.isEmpty }
+                                .joined(separator: " • ")
+                        )
+                    }
+                }
+            }
+
+            if appState.isLoadingArticles && appState.selectedIssue?.id == issue.id {
+                PhoneEmptyState(
+                    title: "Loading articles",
+                    message: "Issue articles are being prepared for this dashboard shortcut.",
+                    symbol: "doc.text.magnifyingglass"
+                )
+            } else if appState.selectedIssue?.id == issue.id && appState.articles.isEmpty {
+                PhoneEmptyState(
+                    title: "No articles found",
+                    message: "This issue did not return any article rows.",
+                    symbol: "doc.text"
+                )
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(dashboardArticles, id: \.id) { article in
+                        Button {
+                            Task { await appState.openArticle(article) }
+                        } label: {
+                            PhoneRowCard(
+                                artworkURLs: LegacyConfig.issueCoverCandidates(journal: article.journalName, issue: article.issueTitle),
+                                title: article.title,
+                                subtitle: article.author,
+                                detail: [article.journalName, article.issueTitle].joined(separator: " • "),
+                                badgeText: "Article",
+                                trailingText: "Open"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .task(id: issue.id) {
+            await appState.selectIssue(issue)
+        }
+    }
+
+    private var dashboardArticles: [Article] {
+        guard appState.selectedIssue?.id == issue.id else { return [] }
+        return appState.articles
+    }
+}
+
+private struct PhoneDashboardBookDetailScreen: View {
+    @EnvironmentObject private var appState: AppState
+
+    let book: Book
+    let onBack: () -> Void
+
+    var body: some View {
+        PhonePageScroll {
+            PhoneHeaderBlock(
+                eyebrow: "Dashboard",
+                title: book.title,
+                subtitle: book.editors
+            ) {
+                PhoneBackButton(label: "Dashboard", action: onBack)
+            }
+
+            PhoneSurfaceCard {
+                HStack(alignment: .top, spacing: 14) {
+                    RemoteArtworkView(
+                        urls: artworkURLs,
+                        aspectRatio: 0.76,
+                        cornerRadius: 16
+                    )
+                    .frame(width: 86, height: 116)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        PhoneInfoLine(label: "Publisher", value: book.company)
+                        PhoneInfoLine(label: "Year", value: book.year)
+                        PhoneInfoLine(label: "Subject", value: book.subject)
+                        PhoneInfoLine(
+                            label: "ISBN",
+                            value: book.isbnOnline.isEmpty ? book.isbnPrint : book.isbnOnline
+                        )
+                    }
+                }
+            }
+
+            if appState.isLoadingChapters && appState.selectedBook?.id == book.id {
+                PhoneEmptyState(
+                    title: "Loading chapters",
+                    message: "The book table of contents is being fetched.",
+                    symbol: "text.book.closed"
+                )
+            } else if appState.selectedBook?.id == book.id && appState.chapters.isEmpty {
+                PhoneEmptyState(
+                    title: "No chapters found",
+                    message: "This title did not return chapter rows from the database.",
+                    symbol: "text.book.closed"
+                )
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(dashboardChapters, id: \.id) { chapter in
+                        Button {
+                            Task { await appState.openChapter(chapter) }
+                        } label: {
+                            PhoneRowCard(
+                                artworkURLs: artworkURLs,
+                                title: chapter.title,
+                                subtitle: chapter.editors,
+                                detail: [chapter.bookTitle, chapter.year].filter { !$0.isEmpty }.joined(separator: " • "),
+                                badgeText: "Chapter",
+                                trailingText: "Open"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .task(id: book.id) {
+            await appState.selectBook(book)
+        }
+    }
+
+    private var dashboardChapters: [Chapter] {
+        guard appState.selectedBook?.id == book.id else { return [] }
+        return appState.chapters
+    }
+
+    private var artworkURLs: [URL] {
+        var urls = LegacyConfig.bookCoverCandidates(isbn: book.isbnOnline)
+        if book.isbnPrint != book.isbnOnline {
+            urls += LegacyConfig.bookCoverCandidates(isbn: book.isbnPrint)
+        }
+        return urls
+    }
+}
+
+private struct PhoneDashboardVideoSetDetailScreen: View {
+    @EnvironmentObject private var appState: AppState
+
+    let set: VideoSet
+    let onBack: () -> Void
+
+    var body: some View {
+        PhonePageScroll {
+            PhoneHeaderBlock(
+                eyebrow: "Dashboard",
+                title: set.setName,
+                subtitle: set.editors
+            ) {
+                PhoneBackButton(label: "Dashboard", action: onBack)
+            }
+
+            PhoneSurfaceCard {
+                HStack(alignment: .top, spacing: 14) {
+                    RemoteArtworkView(
+                        urls: LegacyConfig.videoCoverCandidates(name: set.setName),
+                        aspectRatio: 1.2,
+                        cornerRadius: 16,
+                        imageAlignment: .top,
+                        imageContentMode: .fit,
+                        imagePadding: 4
+                    )
+                    .frame(width: 86, height: 116)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        PhoneInfoLine(label: "Editors", value: set.editors)
+                        PhoneInfoLine(label: "Subject", value: set.subject)
+                        PhoneInfoLine(
+                            label: "Access",
+                            value: set.isAccessible(for: appState.session?.userID ?? "") ? "Available" : "Restricted"
+                        )
+                    }
+                }
+            }
+
+            if appState.isLoadingVideoSetEntries && appState.selectedVideoSet?.id == set.id {
+                PhoneEmptyState(
+                    title: "Loading set entries",
+                    message: "Fetching the videos inside this collection.",
+                    symbol: "arrow.triangle.2.circlepath"
+                )
+            } else if appState.selectedVideoSet?.id == set.id && appState.videoSetEntries.isEmpty {
+                PhoneEmptyState(
+                    title: "No set entries found",
+                    message: "This collection did not return playable rows.",
+                    symbol: "square.stack.3d.up.slash"
+                )
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(dashboardEntries, id: \.id) { entry in
+                        Button {
+                            Task { await appState.playVideoSetEntry(entry, from: set) }
+                        } label: {
+                            PhoneRowCard(
+                                artworkURLs: LegacyConfig.videoCoverCandidates(name: entry.imageLink),
+                                title: entry.title,
+                                subtitle: entry.author.isEmpty ? entry.editor : entry.author,
+                                detail: entry.setName,
+                                badgeText: "Video",
+                                trailingText: "Play"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .task(id: set.id) {
+            await appState.selectVideoSet(set)
+        }
+    }
+
+    private var dashboardEntries: [VideoSetEntry] {
+        guard appState.selectedVideoSet?.id == set.id else { return [] }
+        return appState.videoSetEntries
+    }
+}
+
+private struct PhoneBackButton: View {
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(label, systemImage: "chevron.left")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Palette.accent)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct PhoneInfoLine: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(0.8)
+                .foregroundStyle(Palette.highlight)
+            Text(value.isEmpty ? "-" : value)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(Palette.ink)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

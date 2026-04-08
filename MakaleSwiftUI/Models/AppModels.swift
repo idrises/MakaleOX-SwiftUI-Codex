@@ -509,10 +509,45 @@ struct DocumentPresentation: Identifiable, Equatable {
     let url: URL
 }
 
+enum VideoSourceKind: String, Equatable {
+    case library
+    case set
+
+    var cardTitle: String {
+        switch self {
+        case .library:
+            return "Book / Journal"
+        case .set:
+            return "Video Set"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .library:
+            return "books.vertical"
+        case .set:
+            return "square.stack.3d.up"
+        }
+    }
+
+    var summaryPrefix: String {
+        switch self {
+        case .library:
+            return "Connected source"
+        case .set:
+            return "Connected set"
+        }
+    }
+}
+
 struct VideoPresentation: Identifiable, Equatable {
     let id = UUID()
     let title: String
     let url: URL
+    let sourceKind: VideoSourceKind
+    let sourceName: String
+    let sourceDetail: String
 }
 
 struct AppAlert: Identifiable, Equatable {

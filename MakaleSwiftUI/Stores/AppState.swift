@@ -597,6 +597,7 @@ final class AppState: ObservableObject {
     func openArticle(_ article: Article) async {
         guard let session else { return }
         guard validateSession(session) else { return }
+        var resolvedURL: URL?
 
         await perform("Opening article") { [self] in
             let url = try await self.assetLibrary.articleURL(for: article) { progress in
@@ -619,14 +620,19 @@ final class AppState: ObservableObject {
                     reference: .article(journal: article.journalName, folder: article.folder, pdfLink: article.pdfLink)
                 )
             )
-            self.activeVideo = nil
-            self.activeDocument = DocumentPresentation(title: article.title, url: url)
+            resolvedURL = url
+        }
+
+        if let resolvedURL {
+            activeVideo = nil
+            activeDocument = DocumentPresentation(title: article.title, url: resolvedURL)
         }
     }
 
     func openChapter(_ chapter: Chapter) async {
         guard let session else { return }
         guard validateSession(session) else { return }
+        var resolvedURL: URL?
 
         await perform("Opening chapter") { [self] in
             let url = try await self.assetLibrary.chapterURL(for: chapter) { progress in
@@ -646,8 +652,12 @@ final class AppState: ObservableObject {
                     reference: .chapter(isbn: chapter.isbn, pdfLink: chapter.pdfLink)
                 )
             )
-            self.activeVideo = nil
-            self.activeDocument = DocumentPresentation(title: chapter.title, url: url)
+            resolvedURL = url
+        }
+
+        if let resolvedURL {
+            activeVideo = nil
+            activeDocument = DocumentPresentation(title: chapter.title, url: resolvedURL)
         }
     }
 
@@ -672,7 +682,7 @@ final class AppState: ObservableObject {
             )
         )
         activeDocument = nil
-        activeVideo = VideoPresentation(title: video.title, url: url)
+        activeVideo = makeVideoPresentation(for: video, url: url)
     }
 
     func openVideoSetEntryFromSearch(_ entry: VideoSetEntry) async {
@@ -733,7 +743,7 @@ final class AppState: ObservableObject {
             )
         )
         activeDocument = nil
-        activeVideo = VideoPresentation(title: entry.title, url: url)
+        activeVideo = makeVideoPresentation(for: entry, url: url)
     }
 
     func reopenHistoryEntry(_ entry: HistoryEntry) async {
@@ -745,6 +755,7 @@ final class AppState: ObservableObject {
                 activeDocument = DocumentPresentation(title: entry.title, url: url)
                 return
             }
+            var resolvedURL: URL?
 
             await perform("Opening history item") { [self] in
                 let reference = try await self.resolveHistoryReference(for: entry)
@@ -774,13 +785,17 @@ final class AppState: ObservableObject {
                 }
 
                 self.historyStore.update(entry.updating(urlString: localURL.path, reference: reference))
-                self.activeVideo = nil
-                self.activeDocument = DocumentPresentation(title: entry.title, url: localURL)
+                resolvedURL = localURL
+            }
+
+            if let resolvedURL {
+                activeVideo = nil
+                activeDocument = DocumentPresentation(title: entry.title, url: resolvedURL)
             }
         case .video, .videoSet:
             if let url = URL(string: entry.urlString), !entry.urlString.isEmpty {
                 activeDocument = nil
-                activeVideo = VideoPresentation(title: entry.title, url: url)
+                activeVideo = makeVideoPresentation(for: entry, reference: entry.reference, url: url)
                 return
             }
 
@@ -803,9 +818,58 @@ final class AppState: ObservableObject {
 
                 self.historyStore.update(entry.updating(urlString: url.absoluteString, reference: reference))
                 self.activeDocument = nil
-                self.activeVideo = VideoPresentation(title: entry.title, url: url)
+                self.activeVideo = makeVideoPresentation(for: entry, reference: reference, url: url)
             }
         }
+    }
+
+    private func makeVideoPresentation(for video: Video, url: URL) -> VideoPresentation {
+        VideoPresentation(
+            title: video.title,
+            url: url,
+            sourceKind: .library,
+            sourceName: video.bookJournal,
+            sourceDetail: [video.author, video.editor].filter { !$0.isEmpty }.joined(separator: " • ")
+        )
+    }
+
+    private func makeVideoPresentation(for entry: VideoSetEntry, url: URL) -> VideoPresentation {
+        VideoPresentation(
+            title: entry.title,
+            url: url,
+            sourceKind: .set,
+            sourceName: entry.setName,
+            sourceDetail: [entry.author, entry.editor].filter { !$0.isEmpty }.joined(separator: " • ")
+        )
+    }
+
+    private func makeVideoPresentation(
+        for entry: HistoryEntry,
+        reference: HistoryReference?,
+        url: URL
+    ) -> VideoPresentation {
+        let kind: VideoSourceKind
+        switch reference?.kind ?? entry.kind {
+        case .videoSet:
+            kind = .set
+        case .video:
+            kind = .library
+        default:
+            kind = .library
+        }
+
+        let sourceName = {
+            let candidate = reference?.primary ?? entry.subtitle
+            return candidate.isEmpty ? "Unknown source" : candidate
+        }()
+
+        return VideoPresentation(
+            title: entry.title,
+            url: url,
+            sourceKind: kind,
+            sourceName: sourceName,
+            sourceDetail: entry.detail
+        )
     }
 
     func logout() {

@@ -333,6 +333,9 @@ struct RemoteArtworkView: View {
     let urls: [URL]
     var aspectRatio: CGFloat = 0.72
     var cornerRadius: CGFloat = 22
+    var imageAlignment: Alignment = .center
+    var imageContentMode: ContentMode = .fill
+    var imagePadding: CGFloat = 0
 
     @StateObject private var loader = ArtworkLoader()
 
@@ -351,11 +354,15 @@ struct RemoteArtworkView: View {
 #if canImport(AppKit)
                 Image(nsImage: image)
                     .resizable()
-                    .scaledToFill()
+                    .aspectRatio(contentMode: imageContentMode)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: imageAlignment)
+                    .padding(imagePadding)
 #else
                 Image(uiImage: image)
                     .resizable()
-                    .scaledToFill()
+                    .aspectRatio(contentMode: imageContentMode)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: imageAlignment)
+                    .padding(imagePadding)
 #endif
             } else if loader.isLoading {
                 ProgressView().tint(Palette.accent)
@@ -363,6 +370,7 @@ struct RemoteArtworkView: View {
                 placeholderView
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .aspectRatio(aspectRatio, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .task(id: urls.map(\.absoluteString).joined(separator: "|")) {
@@ -557,11 +565,57 @@ struct StatusPill: View {
     }
 }
 
+@MainActor
+final class PDFReaderNavigator: ObservableObject {
+    @Published private(set) var currentPageIndex = 1
+    @Published private(set) var pageCount = 1
+
+    weak var pdfView: PDFView?
+
+    func attach(to pdfView: PDFView) {
+        self.pdfView = pdfView
+        refresh()
+    }
+
+    func refresh() {
+        let resolvedPageCount = pdfView?.document?.pageCount ?? 0
+        pageCount = max(resolvedPageCount, 1)
+
+        guard let pdfView,
+              let document = pdfView.document,
+              let currentPage = pdfView.currentPage else {
+            currentPageIndex = 1
+            return
+        }
+
+        currentPageIndex = max(document.index(for: currentPage) + 1, 1)
+    }
+
+    var canGoPrevious: Bool {
+        currentPageIndex > 1
+    }
+
+    var canGoNext: Bool {
+        currentPageIndex < pageCount
+    }
+
+    func goToPreviousPage() {
+        pdfView?.goToPreviousPage(nil)
+        refresh()
+    }
+
+    func goToNextPage() {
+        pdfView?.goToNextPage(nil)
+        refresh()
+    }
+}
+
 struct DocumentViewerScreen: View {
     let document: DocumentPresentation
     let backLabel: String
     let onClose: () -> Void
     let showsMetadataHeader: Bool
+    @StateObject private var pdfNavigator = PDFReaderNavigator()
 
     init(
         document: DocumentPresentation,
@@ -576,6 +630,30 @@ struct DocumentViewerScreen: View {
     }
 
     var body: some View {
+#if os(iOS)
+        ZStack {
+            Color(uiColor: .systemGroupedBackground)
+                .ignoresSafeArea()
+
+            PDFContainerView(url: document.url, navigator: pdfNavigator)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.08), radius: 14, y: 4)
+                .padding(.horizontal, 10)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            readerTopBar
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            readerBottomBar
+        }
+#else
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 Button(action: onClose) {
@@ -609,6 +687,7 @@ struct DocumentViewerScreen: View {
             }
 #endif
         }
+#endif
     }
 
 #if os(macOS)
@@ -618,6 +697,102 @@ struct DocumentViewerScreen: View {
         if panel.runModal() == .OK, let destination = panel.url {
             try? FileManager.default.copyItem(at: document.url, to: destination)
         }
+    }
+#endif
+
+#if os(iOS)
+    private var readerTopBar: some View {
+        HStack {
+            Button(action: onClose) {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text(backLabel)
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: 108, alignment: .leading)
+
+            Spacer()
+
+            ShareLink(item: document.url) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+            }
+            .frame(width: 36, alignment: .trailing)
+        }
+        .overlay {
+            Text("PDF View")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) {
+            Divider()
+                .overlay(Color.black.opacity(0.05))
+        }
+    }
+
+    private var readerBottomBar: some View {
+        HStack {
+            Text("\(pdfNavigator.currentPageIndex) of \(pdfNavigator.pageCount)")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(Palette.muted)
+                .frame(minWidth: 72, alignment: .leading)
+
+            Spacer()
+
+            HStack(spacing: 10) {
+                readerNavButton(
+                    systemImage: "chevron.left",
+                    enabled: pdfNavigator.canGoPrevious,
+                    action: { pdfNavigator.goToPreviousPage() }
+                )
+
+                Text("\(pdfNavigator.currentPageIndex) / \(pdfNavigator.pageCount)")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Palette.ink)
+                    .frame(minWidth: 58)
+
+                readerNavButton(
+                    systemImage: "chevron.right",
+                    enabled: pdfNavigator.canGoNext,
+                    action: { pdfNavigator.goToNextPage() }
+                )
+            }
+
+            Spacer()
+
+            Color.clear
+                .frame(width: 72, height: 1)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Divider()
+                .overlay(Color.black.opacity(0.05))
+        }
+    }
+
+    private func readerNavButton(systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(enabled ? Palette.ink : Palette.muted.opacity(0.45))
+                .frame(width: 30, height: 30)
+                .background(Color.white.opacity(enabled ? 0.95 : 0.55), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 #endif
 }
@@ -639,6 +814,23 @@ struct VideoPlayerScreen: View {
     }
 
     var body: some View {
+        Group {
+#if os(iOS)
+            iosVideoBody
+#else
+            macVideoBody
+#endif
+        }
+        .onAppear {
+            player.play()
+        }
+        .onDisappear {
+            player.pause()
+        }
+    }
+
+#if os(macOS)
+    private var macVideoBody: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 Button(action: onClose) {
@@ -685,13 +877,136 @@ struct VideoPlayerScreen: View {
 #endif
             }
         }
-        .onAppear {
-            player.play()
-        }
-        .onDisappear {
-            player.pause()
+    }
+#else
+    private var iosVideoBody: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.black,
+                    Color(red: 0.05, green: 0.08, blue: 0.13),
+                    Color(red: 0.10, green: 0.18, blue: 0.18)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            Circle()
+                .fill(Palette.accent.opacity(0.18))
+                .frame(width: 360, height: 360)
+                .blur(radius: 48)
+                .offset(x: -160, y: -280)
+                .ignoresSafeArea()
+
+            Circle()
+                .fill(Palette.highlight.opacity(0.14))
+                .frame(width: 320, height: 320)
+                .blur(radius: 56)
+                .offset(x: 140, y: 320)
+                .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 18) {
+                iosTopBar
+                iosTitleBlock
+                iosVideoSurface
+                iosMetadataPanel
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, horizontalSizeClass == .regular ? 26 : 18)
+            .padding(.top, 12)
+            .padding(.bottom, 18)
         }
     }
+
+    private var iosTopBar: some View {
+        HStack(spacing: 12) {
+            Button(action: onClose) {
+                Label(backLabel, systemImage: "chevron.left")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.10))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var iosTitleBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("PLAYING NOW")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .tracking(1.5)
+                .foregroundStyle(Palette.highlight)
+
+            Text(video.title)
+                .font(.system(size: horizontalSizeClass == .regular ? 21 : 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.white)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var iosVideoSurface: some View {
+        ZStack {
+            IOSInlineVideoPlayerContainer(player: player)
+                .frame(maxWidth: .infinity)
+                .frame(height: horizontalSizeClass == .regular ? 460 : 248)
+                .background(Color.black)
+                .clipShape(RoundedRectangle(cornerRadius: horizontalSizeClass == .regular ? 30 : 26, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: horizontalSizeClass == .regular ? 30 : 26, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.35), radius: 28, y: 16)
+
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.18),
+                    Color.black.opacity(0.04),
+                    Color.clear
+                ],
+                startPoint: .bottom,
+                endPoint: .top
+            )
+            .clipShape(RoundedRectangle(cornerRadius: horizontalSizeClass == .regular ? 30 : 26, style: .continuous))
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var iosMetadataPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Video details")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.white)
+
+            VideoMetaCard(
+                systemImage: video.sourceKind.systemImage,
+                title: video.sourceKind.cardTitle,
+                detail: video.sourceName,
+                caption: video.sourceDetail.isEmpty ? video.sourceKind.summaryPrefix : video.sourceDetail
+            )
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+        )
+    }
+#endif
 
     private func seek(by delta: Double) {
         let currentSeconds = max(player.currentTime().seconds, 0)
@@ -719,6 +1034,56 @@ struct VideoPlayerScreen: View {
 #endif
     }
 }
+
+#if os(iOS)
+private struct VideoMetaCard: View {
+    let systemImage: String
+    let title: String
+    let detail: String
+    let caption: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Palette.highlight)
+                .frame(width: 36, height: 36)
+                .background(Color.white.opacity(0.08), in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.72))
+                    .lineLimit(1)
+                Text(detail)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !caption.isEmpty {
+                    Text(caption)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.62))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+#endif
 
 struct PlayerSkipButton: View {
     let systemImage: String
@@ -771,11 +1136,13 @@ struct IOSInlineVideoPlayerContainer: UIViewControllerRepresentable {
         controller.entersFullScreenWhenPlaybackBegins = false
         controller.exitsFullScreenWhenPlaybackEnds = false
         controller.videoGravity = .resizeAspect
+        controller.view.backgroundColor = .black
         return controller
     }
 
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
         uiViewController.player = player
+        uiViewController.showsPlaybackControls = true
     }
 }
 #endif
@@ -783,6 +1150,7 @@ struct IOSInlineVideoPlayerContainer: UIViewControllerRepresentable {
 #if os(macOS)
 struct PDFContainerView: NSViewRepresentable {
     let url: URL
+    var navigator: PDFReaderNavigator? = nil
 
     func makeNSView(context: Context) -> PDFView {
         let view = PDFView()
@@ -794,12 +1162,29 @@ struct PDFContainerView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: PDFView, context: Context) {
-        nsView.document = PDFDocument(url: url)
+        if context.coordinator.loadedURL != url || nsView.document == nil {
+            nsView.document = PDFDocument(url: url)
+            context.coordinator.loadedURL = url
+        }
+        navigator?.attach(to: nsView)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    final class Coordinator {
+        var loadedURL: URL?
     }
 }
 #else
 struct PDFContainerView: UIViewRepresentable {
     let url: URL
+    var navigator: PDFReaderNavigator? = nil
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(navigator: navigator)
+    }
 
     func makeUIView(context: Context) -> PDFView {
         let view = PDFView()
@@ -807,11 +1192,75 @@ struct PDFContainerView: UIViewRepresentable {
         view.displayMode = .singlePageContinuous
         view.displayDirection = .vertical
         view.backgroundColor = .white
+        view.displaysPageBreaks = true
+        context.coordinator.bind(to: view)
         return view
     }
 
     func updateUIView(_ uiView: PDFView, context: Context) {
-        uiView.document = PDFDocument(url: url)
+        context.coordinator.loadDocumentIfNeeded(from: url, into: uiView)
+        context.coordinator.bind(to: uiView)
+        Task { @MainActor in
+            navigator?.refresh()
+        }
+    }
+
+    @MainActor
+    final class Coordinator {
+        private weak var observedView: PDFView?
+        private let navigator: PDFReaderNavigator?
+        private var observers: [NSObjectProtocol] = []
+        private var loadedURL: URL?
+
+        init(navigator: PDFReaderNavigator?) {
+            self.navigator = navigator
+        }
+
+        deinit {
+            observers.forEach(NotificationCenter.default.removeObserver)
+        }
+
+        func bind(to view: PDFView) {
+            guard observedView !== view else {
+                navigator?.attach(to: view)
+                return
+            }
+
+            observers.forEach(NotificationCenter.default.removeObserver)
+            observers.removeAll()
+            observedView = view
+            navigator?.attach(to: view)
+
+            observers.append(
+                NotificationCenter.default.addObserver(
+                    forName: Notification.Name.PDFViewPageChanged,
+                    object: view,
+                    queue: .main
+                ) { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        self?.navigator?.refresh()
+                    }
+                }
+            )
+
+            observers.append(
+                NotificationCenter.default.addObserver(
+                    forName: Notification.Name.PDFViewDocumentChanged,
+                    object: view,
+                    queue: .main
+                ) { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        self?.navigator?.refresh()
+                    }
+                }
+            )
+        }
+
+        func loadDocumentIfNeeded(from url: URL, into view: PDFView) {
+            guard loadedURL != url || view.document == nil else { return }
+            view.document = PDFDocument(url: url)
+            loadedURL = url
+        }
     }
 }
 #endif

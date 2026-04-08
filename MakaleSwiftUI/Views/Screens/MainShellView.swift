@@ -101,31 +101,24 @@ struct MainShellView: View {
         }
 #if os(iOS)
         .sheet(item: modalDocumentBinding) { document in
-            AppCanvas {
-                DocumentViewerScreen(
-                    document: document,
-                    backLabel: "Close",
-                    showsMetadataHeader: false,
-                    onClose: { appState.activeDocument = nil }
-                )
-                .padding(.horizontal, detailPadding)
-                .padding(.bottom, detailPadding)
-                .padding(.top, detailTopPadding)
-            }
+            DocumentViewerScreen(
+                document: document,
+                backLabel: "Close",
+                showsMetadataHeader: false,
+                onClose: { appState.activeDocument = nil }
+            )
             .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            .presentationDragIndicator(.hidden)
         }
         .sheet(item: modalVideoBinding) { video in
-            AppCanvas {
-                VideoPlayerScreen(
-                    video: video,
-                    backLabel: "Close",
-                    onClose: { appState.activeVideo = nil }
-                )
-                .padding(.horizontal, detailPadding)
-                .padding(.bottom, detailPadding)
-                .padding(.top, detailTopPadding)
-            }
+            VideoPlayerScreen(
+                video: video,
+                backLabel: "Close",
+                onClose: { appState.activeVideo = nil }
+            )
+            .presentationBackground(.clear)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.hidden)
         }
 #endif
 #if os(macOS)
