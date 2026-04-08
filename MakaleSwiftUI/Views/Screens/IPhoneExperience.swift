@@ -539,6 +539,7 @@ private struct PhoneSectionHeader: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(Palette.ink)
             if !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.system(size: 13, weight: .regular, design: .rounded))
@@ -758,6 +759,7 @@ private struct PhoneCarouselCard: View {
                 Text(title)
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .lineLimit(2)
+                    .foregroundStyle(Palette.ink)
 
                 Text(subtitle)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
@@ -802,6 +804,7 @@ private struct PhoneEmptyState: View {
                     .foregroundStyle(Palette.accent)
                 Text(title)
                     .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(Palette.ink)
                 Text(message)
                     .font(.system(size: 14, weight: .regular, design: .rounded))
                     .foregroundStyle(Palette.muted)
@@ -904,6 +907,7 @@ private struct PhoneDashboardScreen: View {
                                     .foregroundStyle(Palette.highlight)
                                 Text(AppBranding.title)
                                     .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Palette.ink)
                                 Text(session.subject.isEmpty ? session.displayName : session.subject)
                                     .font(.system(size: 12, weight: .medium, design: .rounded))
                                     .foregroundStyle(Palette.muted)
@@ -2607,6 +2611,7 @@ private struct PhoneProfileExperienceScreen: View {
         HStack(alignment: .top) {
             Text(label)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Palette.ink)
                 .frame(width: 78, alignment: .leading)
             Text(value.isEmpty ? "-" : value)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
