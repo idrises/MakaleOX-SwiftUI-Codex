@@ -799,11 +799,16 @@ struct DocumentViewerScreen: View {
 
 struct VideoPlayerScreen: View {
     @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
+    @Environment(\.scenePhase) private var scenePhase
     let video: VideoPresentation
     let backLabel: String
     let onClose: () -> Void
     @State private var player: AVPlayer
     @State private var currentItem: VideoRailItem
+    @State private var timeObserverToken: Any?
+    @State private var playbackEndObserver: NSObjectProtocol?
+    @State private var lastTrackedPlaybackSecond: Double?
 #if os(iOS)
     @State private var focusedRailItemID: String?
     @State private var selectionCommitTask: Task<Void, Never>?
@@ -830,13 +835,21 @@ struct VideoPlayerScreen: View {
 #endif
         }
         .onAppear {
-            player.play()
+            installPeriodicProgressObserverIfNeeded()
+            preparePlayback(for: currentItem, replaceCurrentItem: false)
         }
         .onDisappear {
+            persistCurrentPlaybackProgress()
             player.pause()
+            removePlayerObservers()
 #if os(iOS)
             selectionCommitTask?.cancel()
 #endif
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active {
+                persistCurrentPlaybackProgress()
+            }
         }
     }
 
@@ -1140,9 +1153,9 @@ struct VideoPlayerScreen: View {
         guard let selectedItem = railItems.first(where: { $0.id == itemID }) else { return }
         guard selectedItem.id != currentItem.id else { return }
 
+        persistCurrentPlaybackProgress()
         currentItem = selectedItem
-        player.replaceCurrentItem(with: AVPlayerItem(url: selectedItem.url))
-        player.play()
+        preparePlayback(for: selectedItem, replaceCurrentItem: true)
     }
 
     private func seek(by delta: Double) {
@@ -1247,6 +1260,117 @@ struct VideoPlayerScreen: View {
         }
     }
 #endif
+
+    private func preparePlayback(for item: VideoRailItem, replaceCurrentItem: Bool) {
+        if replaceCurrentItem {
+            player.replaceCurrentItem(with: AVPlayerItem(url: item.url))
+        }
+
+        installPlaybackEndObserver()
+
+        if let resumeSecond = videoPlaybackStore.resumeTime(forRemoteURL: item.remoteURL) {
+            lastTrackedPlaybackSecond = resumeSecond
+            let resumeTime = CMTime(seconds: resumeSecond, preferredTimescale: 600)
+            player.seek(to: resumeTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                lastTrackedPlaybackSecond = resumeSecond
+                player.play()
+            }
+        } else {
+            let currentSeconds = max(player.currentTime().seconds, 0)
+            lastTrackedPlaybackSecond = currentSeconds.isFinite ? currentSeconds : 0
+            player.play()
+        }
+    }
+
+    private func installPeriodicProgressObserverIfNeeded() {
+        guard timeObserverToken == nil else { return }
+
+        let interval = CMTime(seconds: 5, preferredTimescale: 600)
+        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+            recordProgress(at: time.seconds)
+        }
+    }
+
+    private func installPlaybackEndObserver() {
+        if let playbackEndObserver {
+            NotificationCenter.default.removeObserver(playbackEndObserver)
+            self.playbackEndObserver = nil
+        }
+
+        guard let currentPlayerItem = player.currentItem else { return }
+        playbackEndObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: currentPlayerItem,
+            queue: .main
+        ) { _ in
+            persistCurrentPlaybackProgress()
+            let durationSeconds = currentDurationSeconds
+            videoPlaybackStore.markCompleted(for: currentItem, durationSeconds: durationSeconds)
+            lastTrackedPlaybackSecond = nil
+        }
+    }
+
+    private func removePlayerObservers() {
+        if let timeObserverToken {
+            player.removeTimeObserver(timeObserverToken)
+            self.timeObserverToken = nil
+        }
+
+        if let playbackEndObserver {
+            NotificationCenter.default.removeObserver(playbackEndObserver)
+            self.playbackEndObserver = nil
+        }
+
+        lastTrackedPlaybackSecond = nil
+    }
+
+    private func recordProgress(at seconds: Double) {
+        let boundedSeconds = max(seconds, 0)
+        guard boundedSeconds.isFinite else { return }
+
+        let watchedIncrement: Double
+        if let lastTrackedPlaybackSecond,
+           boundedSeconds + 0.25 >= lastTrackedPlaybackSecond {
+            watchedIncrement = min(max(boundedSeconds - lastTrackedPlaybackSecond, 0), 6)
+        } else {
+            watchedIncrement = 0
+        }
+
+        lastTrackedPlaybackSecond = boundedSeconds
+        videoPlaybackStore.saveProgress(
+            for: currentItem,
+            positionSeconds: boundedSeconds,
+            durationSeconds: currentDurationSeconds,
+            watchedIncrement: watchedIncrement
+        )
+    }
+
+    private func persistCurrentPlaybackProgress() {
+        let currentSeconds = max(player.currentTime().seconds, 0)
+        guard currentSeconds.isFinite else { return }
+
+        let watchedIncrement: Double
+        if let lastTrackedPlaybackSecond,
+           currentSeconds + 0.25 >= lastTrackedPlaybackSecond {
+            watchedIncrement = min(max(currentSeconds - lastTrackedPlaybackSecond, 0), 6)
+        } else {
+            watchedIncrement = 0
+        }
+
+        videoPlaybackStore.saveProgress(
+            for: currentItem,
+            positionSeconds: currentSeconds,
+            durationSeconds: currentDurationSeconds,
+            watchedIncrement: watchedIncrement
+        )
+        lastTrackedPlaybackSecond = currentSeconds
+    }
+
+    private var currentDurationSeconds: Double? {
+        let seconds = player.currentItem?.duration.seconds ?? .infinity
+        guard seconds.isFinite, seconds > 0 else { return nil }
+        return seconds
+    }
 
     private func performDownloadAction() {
         guard !isDownloadActionDisabled else { return }

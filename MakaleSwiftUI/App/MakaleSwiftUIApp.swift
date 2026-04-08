@@ -4,6 +4,7 @@ import SwiftUI
 struct MakaleSwiftUIApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var videoDownloadManager = VideoDownloadManager.shared
+    @StateObject private var videoPlaybackStore = VideoPlaybackStore.shared
 #if os(iOS)
     @UIApplicationDelegateAdaptor(BackgroundDownloadAppDelegate.self) private var backgroundDownloadAppDelegate
 #endif
@@ -19,6 +20,7 @@ struct MakaleSwiftUIApp: App {
             }
             .environmentObject(appState)
             .environmentObject(videoDownloadManager)
+            .environmentObject(videoPlaybackStore)
             .task {
                 await appState.bootstrap()
                 videoDownloadManager.restorePendingTasksIfNeeded()
@@ -53,6 +55,7 @@ struct MakaleSwiftUIApp: App {
             DocumentWindowRoot()
                 .environmentObject(appState)
                 .environmentObject(videoDownloadManager)
+                .environmentObject(videoPlaybackStore)
                 .alert(item: $appState.activeAlert) { alert in
                     Alert(
                         title: Text(alert.title),
@@ -67,6 +70,7 @@ struct MakaleSwiftUIApp: App {
             VideoWindowRoot()
                 .environmentObject(appState)
                 .environmentObject(videoDownloadManager)
+                .environmentObject(videoPlaybackStore)
                 .alert(item: $appState.activeAlert) { alert in
                     Alert(
                         title: Text(alert.title),
