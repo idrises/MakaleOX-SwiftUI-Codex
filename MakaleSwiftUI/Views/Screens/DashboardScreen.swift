@@ -475,21 +475,39 @@ struct DashboardScreen: View {
                     .lineLimit(1)
             }
         } footer: {
-            HStack(alignment: .center, spacing: 5) {
-                StatusPill(
-                    text: isAccessible ? "Available" : "Restricted",
-                    tint: isAccessible ? Palette.accent : Palette.danger
-                )
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 5) {
+                    StatusPill(
+                        text: isAccessible ? "Available" : "Restricted",
+                        tint: isAccessible ? Palette.accent : Palette.danger
+                    )
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                Button("Open Set") {
-                    Task { await openVideoSetFromDashboard(set) }
+                    Button("Open Set") {
+                        Task { await openVideoSetFromDashboard(set) }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Palette.accent)
+                    .controlSize(.small)
+                    .disabled(!isAccessible)
                 }
-                .buttonStyle(.bordered)
-                .tint(Palette.accent)
-                .controlSize(.small)
-                .disabled(!isAccessible)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    StatusPill(
+                        text: isAccessible ? "Available" : "Restricted",
+                        tint: isAccessible ? Palette.accent : Palette.danger
+                    )
+
+                    Button("Open Set") {
+                        Task { await openVideoSetFromDashboard(set) }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Palette.accent)
+                    .controlSize(.small)
+                    .disabled(!isAccessible)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

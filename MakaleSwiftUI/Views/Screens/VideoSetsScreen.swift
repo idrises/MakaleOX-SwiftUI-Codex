@@ -207,22 +207,41 @@ struct VideoSetsScreen: View {
                     .lineLimit(1)
             }
         } footer: {
-            HStack(alignment: .center, spacing: 8) {
-                StatusPill(
-                    text: isAccessible ? "Available to you" : "Restricted",
-                    tint: isAccessible ? Palette.accent : Palette.danger
-                )
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 8) {
+                    StatusPill(
+                        text: isAccessible ? "Available" : "Restricted",
+                        tint: isAccessible ? Palette.accent : Palette.danger
+                    )
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                Button("Open Set") {
-                    appState.videoSetReturnSection = nil
-                    activeSet = set
+                    Button("Open Set") {
+                        appState.videoSetReturnSection = nil
+                        activeSet = set
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .tint(isAccessible ? Palette.accent : Palette.muted)
+                    .disabled(!isAccessible)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .tint(isAccessible ? Palette.accent : Palette.muted)
-                .disabled(!isAccessible)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    StatusPill(
+                        text: isAccessible ? "Available" : "Restricted",
+                        tint: isAccessible ? Palette.accent : Palette.danger
+                    )
+
+                    Button("Open Set") {
+                        appState.videoSetReturnSection = nil
+                        activeSet = set
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .tint(isAccessible ? Palette.accent : Palette.muted)
+                    .disabled(!isAccessible)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .background(
