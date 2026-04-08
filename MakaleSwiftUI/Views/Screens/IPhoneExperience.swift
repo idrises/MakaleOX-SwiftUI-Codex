@@ -1,6 +1,6 @@
 #if os(iOS)
-import PhotosUI
 import SwiftUI
+import UIKit
 
 private enum PhoneRootTab: String, CaseIterable, Identifiable {
     case home
@@ -1308,40 +1308,47 @@ private struct PhoneDashboardScreen: View {
 
 private struct PhoneDashboardAvatarPicker: View {
     @EnvironmentObject private var profileAvatarStore: ProfileAvatarStore
-    @State private var selectedItem: PhotosPickerItem?
+    @State private var isShowingOptions = false
+    @State private var activeImageSource: PhoneAvatarImageSource?
 
     let session: SessionInfo
 
     var body: some View {
-        PhotosPicker(selection: $selectedItem, matching: .images) {
-            ZStack(alignment: .bottomTrailing) {
-                avatarImage
-                    .frame(width: 56, height: 56)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.88), lineWidth: 2)
-                    )
-                    .shadow(color: .black.opacity(0.10), radius: 10, y: 4)
-
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color.white)
-                    .frame(width: 20, height: 20)
-                    .background(Palette.accent, in: Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.9), lineWidth: 1)
-                    )
-            }
+        Button {
+            isShowingOptions = true
+        } label: {
+            avatarImage
+                .frame(width: 56, height: 56)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.88), lineWidth: 2)
+                )
+                .shadow(color: .black.opacity(0.10), radius: 10, y: 4)
         }
         .buttonStyle(.plain)
-        .onChange(of: selectedItem) { _, newValue in
-            guard let newValue else { return }
-            Task {
-                guard let data = try? await newValue.loadTransferable(type: Data.self) else { return }
-                profileAvatarStore.saveAvatarData(data, for: session)
-                selectedItem = nil
+        .confirmationDialog("Profile photo", isPresented: $isShowingOptions, titleVisibility: .visible) {
+            Button("Fotoğraf seç") {
+                activeImageSource = .photoLibrary
+            }
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button("Fotoğraf çek") {
+                    activeImageSource = .camera
+                }
+            }
+            if profileAvatarStore.imageData(for: session) != nil {
+                Button("Kaldır", role: .destructive) {
+                    profileAvatarStore.removeAvatar(for: session)
+                }
+            }
+            Button("Vazgeç", role: .cancel) {}
+        }
+        .sheet(item: $activeImageSource) { source in
+            PhoneAvatarImagePicker(sourceType: source.sourceType) { data in
+                if let data {
+                    profileAvatarStore.saveAvatarData(data, for: session)
+                }
+                activeImageSource = nil
             }
         }
     }
@@ -1367,6 +1374,64 @@ private struct PhoneDashboardAvatarPicker: View {
                     .font(.system(size: 28, weight: .medium))
                     .foregroundStyle(Palette.accent)
             }
+        }
+    }
+}
+
+private enum PhoneAvatarImageSource: String, Identifiable {
+    case photoLibrary
+    case camera
+
+    var id: String { rawValue }
+
+    var sourceType: UIImagePickerController.SourceType {
+        switch self {
+        case .photoLibrary:
+            return .photoLibrary
+        case .camera:
+            return .camera
+        }
+    }
+}
+
+private struct PhoneAvatarImagePicker: UIViewControllerRepresentable {
+    let sourceType: UIImagePickerController.SourceType
+    let onSelection: (Data?) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelection: onSelection)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let controller = UIImagePickerController()
+        controller.sourceType = sourceType
+        controller.allowsEditing = true
+        controller.delegate = context.coordinator
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        private let onSelection: (Data?) -> Void
+
+        init(onSelection: @escaping (Data?) -> Void) {
+            self.onSelection = onSelection
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+            onSelection(nil)
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            let image = (info[.editedImage] ?? info[.originalImage]) as? UIImage
+            let data = image?.jpegData(compressionQuality: 0.92) ?? image?.pngData()
+            picker.dismiss(animated: true)
+            onSelection(data)
         }
     }
 }

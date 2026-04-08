@@ -36,6 +36,11 @@ final class ProfileAvatarStore: ObservableObject {
         persist()
     }
 
+    func removeAvatar(for session: SessionInfo) {
+        avatarDataByIdentity.removeValue(forKey: identity(for: session))
+        persist()
+    }
+
     private func identity(for session: SessionInfo) -> String {
         if !session.userID.isEmpty {
             return session.userID
