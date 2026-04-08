@@ -8,6 +8,7 @@ private enum VideoSetsLayoutMode: String {
 struct VideoSetsScreen: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -250,6 +251,7 @@ struct VideoSetsScreen: View {
             CompactMediaRowCard(
                 artworkURLs: item.record.artworkURLs,
                 title: item.record.title,
+                playbackRecord: playbackRecord(for: item),
                 artworkAspectRatio: 0.82,
                 artworkWidth: 84,
                 artworkHeight: 104,
@@ -280,6 +282,12 @@ struct VideoSetsScreen: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    @MainActor
+    private func playbackRecord(for item: DownloadedVideoItem) -> VideoPlaybackRecord? {
+        guard let remoteURL = item.record.remoteURL else { return nil }
+        return videoPlaybackStore.record(forRemoteURL: remoteURL)
     }
 
     private var filteredVideoSets: [VideoSet] {
@@ -338,6 +346,7 @@ struct VideoSetsScreen: View {
 
 struct VideoSetDetailPage: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
 
     let set: VideoSet
     let backTitle: String
@@ -406,6 +415,7 @@ struct VideoSetDetailPage: View {
                                 CompactMediaRowCard(
                                     artworkURLs: LegacyConfig.videoCoverCandidates(name: entry.imageLink),
                                     title: entry.title,
+                                    playbackRecord: playbackRecord(for: entry),
                                     artworkAspectRatio: 0.82,
                                     artworkWidth: 84,
                                     artworkHeight: 104,
@@ -446,6 +456,14 @@ struct VideoSetDetailPage: View {
                 await appState.selectVideoSet(set)
             }
         }
+    }
+
+    @MainActor
+    private func playbackRecord(for entry: VideoSetEntry) -> VideoPlaybackRecord? {
+        guard let remoteURL = LegacyConfig.videoSetRemoteURL(setName: entry.setName, link: entry.remoteLink) else {
+            return nil
+        }
+        return videoPlaybackStore.record(forRemoteURL: remoteURL)
     }
 
     private var visibleEntries: [VideoSetEntry] {

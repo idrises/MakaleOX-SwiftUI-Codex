@@ -8,6 +8,7 @@ private enum VideosLayoutMode: String {
 struct VideosScreen: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -131,6 +132,7 @@ struct VideosScreen: View {
             CompactMediaRowCard(
                 artworkURLs: LegacyConfig.videoCoverCandidates(name: video.imageLink),
                 title: video.title,
+                playbackRecord: playbackRecord(for: video),
                 artworkAspectRatio: 0.82,
                 artworkWidth: 84,
                 artworkHeight: 104,
@@ -176,6 +178,7 @@ struct VideosScreen: View {
             CompactMediaRowCard(
                 artworkURLs: item.record.artworkURLs,
                 title: item.record.title,
+                playbackRecord: playbackRecord(for: item),
                 artworkAspectRatio: 0.82,
                 artworkWidth: 84,
                 artworkHeight: 104,
@@ -206,6 +209,20 @@ struct VideosScreen: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    @MainActor
+    private func playbackRecord(for video: Video) -> VideoPlaybackRecord? {
+        guard let remoteURL = LegacyConfig.videoRemoteURL(bookJournal: video.bookJournal, link: video.remoteLink) else {
+            return nil
+        }
+        return videoPlaybackStore.record(forRemoteURL: remoteURL)
+    }
+
+    @MainActor
+    private func playbackRecord(for item: DownloadedVideoItem) -> VideoPlaybackRecord? {
+        guard let remoteURL = item.record.remoteURL else { return nil }
+        return videoPlaybackStore.record(forRemoteURL: remoteURL)
     }
 
     private var filteredVideos: [Video] {

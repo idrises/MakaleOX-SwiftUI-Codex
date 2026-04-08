@@ -440,6 +440,7 @@ struct CompactMediaRowCard<Details: View, Footer: View>: View {
     let title: String
     let favoriteSelected: Bool?
     let favoriteAction: (() -> Void)?
+    let playbackRecord: VideoPlaybackRecord?
     let artworkAspectRatio: CGFloat
     let artworkWidth: CGFloat
     let artworkHeight: CGFloat
@@ -456,6 +457,7 @@ struct CompactMediaRowCard<Details: View, Footer: View>: View {
         title: String,
         favoriteSelected: Bool? = nil,
         favoriteAction: (() -> Void)? = nil,
+        playbackRecord: VideoPlaybackRecord? = nil,
         artworkAspectRatio: CGFloat = 0.78,
         artworkWidth: CGFloat = 84,
         artworkHeight: CGFloat = 108,
@@ -471,6 +473,7 @@ struct CompactMediaRowCard<Details: View, Footer: View>: View {
         self.title = title
         self.favoriteSelected = favoriteSelected
         self.favoriteAction = favoriteAction
+        self.playbackRecord = playbackRecord
         self.artworkAspectRatio = artworkAspectRatio
         self.artworkWidth = artworkWidth
         self.artworkHeight = artworkHeight
@@ -514,6 +517,10 @@ struct CompactMediaRowCard<Details: View, Footer: View>: View {
 
                 details
 
+                if let playbackRecord {
+                    PlaybackProgressSummary(record: playbackRecord)
+                }
+
                 Spacer(minLength: 3)
 
                 footer
@@ -524,6 +531,90 @@ struct CompactMediaRowCard<Details: View, Footer: View>: View {
         .frame(maxWidth: .infinity, minHeight: artworkHeight + (cardPadding * 2) + 2, alignment: .topLeading)
         .background(Palette.surfaceStrong, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .shadow(color: .black.opacity(0.035), radius: 7, y: 3)
+    }
+}
+
+enum PlaybackProgressFormatting {
+    static func timeString(seconds: Double) -> String {
+        let totalSeconds = max(Int(seconds.rounded(.down)), 0)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+
+        let paddedSeconds = seconds < 10 ? "0\(seconds)" : "\(seconds)"
+        if hours > 0 {
+            let paddedMinutes = minutes < 10 ? "0\(minutes)" : "\(minutes)"
+            return "\(hours):\(paddedMinutes):\(paddedSeconds)"
+        }
+
+        return "\(minutes):\(paddedSeconds)"
+    }
+}
+
+struct PlaybackProgressSummary: View {
+    let record: VideoPlaybackRecord
+    var compact: Bool = true
+
+    private var progressFraction: Double? {
+        if record.isCompleted {
+            return 1
+        }
+        return record.progressFraction
+    }
+
+    private var leadingText: String {
+        if record.isCompleted {
+            return "Completed"
+        }
+        if record.lastPositionSeconds >= 8 {
+            return "Resume"
+        }
+        return "Watched"
+    }
+
+    private var trailingText: String {
+        if let durationSeconds = record.durationSeconds, durationSeconds > 0 {
+            let currentSeconds = record.isCompleted ? durationSeconds : max(record.lastPositionSeconds, 0)
+            return "\(PlaybackProgressFormatting.timeString(seconds: currentSeconds)) / \(PlaybackProgressFormatting.timeString(seconds: durationSeconds))"
+        }
+
+        return PlaybackProgressFormatting.timeString(seconds: max(record.lastPositionSeconds, record.watchedSeconds))
+    }
+
+    private var barTint: Color {
+        record.isCompleted ? Palette.accent : Palette.highlight
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: compact ? 4 : 6) {
+            HStack(spacing: 8) {
+                Text(leadingText)
+                    .font(.custom("Avenir Next Demi Bold", size: compact ? 9 : 11))
+                    .foregroundStyle(record.isCompleted ? Palette.accent : Palette.muted)
+
+                Spacer(minLength: 0)
+
+                Text(trailingText)
+                    .font(.custom("Avenir Next Medium", size: compact ? 9 : 11))
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(1)
+            }
+
+            if let progressFraction {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule(style: .continuous)
+                            .fill(Palette.accentSoft.opacity(0.9))
+
+                        Capsule(style: .continuous)
+                            .fill(barTint)
+                            .frame(width: max(proxy.size.width * progressFraction, progressFraction > 0 ? 10 : 0))
+                    }
+                }
+                .frame(height: compact ? 5 : 6)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -1305,7 +1396,9 @@ struct VideoPlayerScreen: View {
         ) { _ in
             persistCurrentPlaybackProgress()
             let durationSeconds = currentDurationSeconds
-            videoPlaybackStore.markCompleted(for: currentItem, durationSeconds: durationSeconds)
+            Task { @MainActor in
+                videoPlaybackStore.markCompleted(for: currentItem, durationSeconds: durationSeconds)
+            }
             lastTrackedPlaybackSecond = nil
         }
     }

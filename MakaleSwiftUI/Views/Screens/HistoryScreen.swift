@@ -32,6 +32,7 @@ private enum HistoryPage: String, CaseIterable, Identifiable {
 
 struct HistoryScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @AppStorage("history.page") private var selectedPageRawValue = HistoryPage.all.rawValue
     @State private var searchText = ""
 
@@ -116,6 +117,7 @@ struct HistoryScreen: View {
                                 CompactMediaRowCard(
                                     artworkURLs: coverURLs(for: entry),
                                     title: entry.title,
+                                    playbackRecord: playbackRecord(for: entry),
                                     artworkAspectRatio: 1,
                                     artworkWidth: 84,
                                     artworkHeight: 84,
@@ -162,6 +164,36 @@ struct HistoryScreen: View {
     private func coverURLs(for entry: HistoryEntry) -> [URL] {
         guard let url = URL(string: entry.coverURLString) else { return [] }
         return [url]
+    }
+
+    @MainActor
+    private func playbackRecord(for entry: HistoryEntry) -> VideoPlaybackRecord? {
+        switch entry.kind {
+        case .video, .videoSet:
+            break
+        case .article, .chapter:
+            return nil
+        }
+
+        if let directURL = URL(string: entry.urlString),
+           directURL.scheme != nil,
+           !directURL.isFileURL {
+            return videoPlaybackStore.record(forRemoteURL: directURL)
+        }
+
+        guard let reference = entry.reference else { return nil }
+        let remoteURL: URL?
+        switch reference.kind {
+        case .video:
+            remoteURL = LegacyConfig.videoRemoteURL(bookJournal: reference.primary, link: reference.secondary)
+        case .videoSet:
+            remoteURL = LegacyConfig.videoSetRemoteURL(setName: reference.primary, link: reference.secondary)
+        case .article, .chapter:
+            remoteURL = nil
+        }
+
+        guard let remoteURL else { return nil }
+        return videoPlaybackStore.record(forRemoteURL: remoteURL)
     }
 
     private var selectedPageBinding: Binding<HistoryPage> {

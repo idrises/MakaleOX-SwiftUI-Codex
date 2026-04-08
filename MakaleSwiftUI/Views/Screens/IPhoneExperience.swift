@@ -605,6 +605,7 @@ private struct PhoneRowCard<Footer: View>: View {
     let trailingText: String?
     let favoriteSelected: Bool?
     let favoriteAction: (() -> Void)?
+    let playbackRecord: VideoPlaybackRecord?
     let accessory: Footer
 
     init(
@@ -616,6 +617,7 @@ private struct PhoneRowCard<Footer: View>: View {
         trailingText: String? = nil,
         favoriteSelected: Bool? = nil,
         favoriteAction: (() -> Void)? = nil,
+        playbackRecord: VideoPlaybackRecord? = nil,
         @ViewBuilder accessory: () -> Footer = { EmptyView() }
     ) {
         self.artworkURLs = artworkURLs
@@ -626,6 +628,7 @@ private struct PhoneRowCard<Footer: View>: View {
         self.trailingText = trailingText
         self.favoriteSelected = favoriteSelected
         self.favoriteAction = favoriteAction
+        self.playbackRecord = playbackRecord
         self.accessory = accessory()
     }
 
@@ -662,6 +665,10 @@ private struct PhoneRowCard<Footer: View>: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if let playbackRecord {
+                    PlaybackProgressSummary(record: playbackRecord)
                 }
 
                 Spacer(minLength: 3)
@@ -708,12 +715,31 @@ private struct PhoneCarouselCard: View {
     let title: String
     let subtitle: String
     let detail: String
+    let playbackRecord: VideoPlaybackRecord?
     let actionTitle: String?
     let action: (() -> Void)?
 
     private let artworkWidth: CGFloat = 132
     private let artworkHeight: CGFloat = 104
     private let cardInset: CGFloat = 10
+
+    init(
+        artworkURLs: [URL],
+        title: String,
+        subtitle: String,
+        detail: String,
+        playbackRecord: VideoPlaybackRecord? = nil,
+        actionTitle: String? = nil,
+        action: (() -> Void)? = nil
+    ) {
+        self.artworkURLs = artworkURLs
+        self.title = title
+        self.subtitle = subtitle
+        self.detail = detail
+        self.playbackRecord = playbackRecord
+        self.actionTitle = actionTitle
+        self.action = action
+    }
 
     var body: some View {
         PhoneSurfaceCard(contentPadding: cardInset) {
@@ -743,6 +769,10 @@ private struct PhoneCarouselCard: View {
                         .font(.system(size: 9, weight: .regular, design: .rounded))
                         .foregroundStyle(Palette.highlight)
                         .lineLimit(2)
+                }
+
+                if let playbackRecord {
+                    PlaybackProgressSummary(record: playbackRecord)
                 }
 
                 if let actionTitle, let action {
@@ -783,9 +813,62 @@ private struct PhoneEmptyState: View {
     }
 }
 
+@MainActor
+private func phonePlaybackRecord(for video: Video, using store: VideoPlaybackStore) -> VideoPlaybackRecord? {
+    guard let remoteURL = LegacyConfig.videoRemoteURL(bookJournal: video.bookJournal, link: video.remoteLink) else {
+        return nil
+    }
+    return store.record(forRemoteURL: remoteURL)
+}
+
+@MainActor
+private func phonePlaybackRecord(for entry: VideoSetEntry, using store: VideoPlaybackStore) -> VideoPlaybackRecord? {
+    guard let remoteURL = LegacyConfig.videoSetRemoteURL(setName: entry.setName, link: entry.remoteLink) else {
+        return nil
+    }
+    return store.record(forRemoteURL: remoteURL)
+}
+
+@MainActor
+private func phonePlaybackRecord(for item: DownloadedVideoItem, using store: VideoPlaybackStore) -> VideoPlaybackRecord? {
+    guard let remoteURL = item.record.remoteURL else { return nil }
+    return store.record(forRemoteURL: remoteURL)
+}
+
+@MainActor
+private func phonePlaybackRecord(for entry: HistoryEntry, using store: VideoPlaybackStore) -> VideoPlaybackRecord? {
+    switch entry.kind {
+    case .video, .videoSet:
+        break
+    case .article, .chapter:
+        return nil
+    }
+
+    if let directURL = URL(string: entry.urlString),
+       directURL.scheme != nil,
+       !directURL.isFileURL {
+        return store.record(forRemoteURL: directURL)
+    }
+
+    guard let reference = entry.reference else { return nil }
+    let remoteURL: URL?
+    switch reference.kind {
+    case .video:
+        remoteURL = LegacyConfig.videoRemoteURL(bookJournal: reference.primary, link: reference.secondary)
+    case .videoSet:
+        remoteURL = LegacyConfig.videoSetRemoteURL(setName: reference.primary, link: reference.secondary)
+    case .article, .chapter:
+        remoteURL = nil
+    }
+
+    guard let remoteURL else { return nil }
+    return store.record(forRemoteURL: remoteURL)
+}
+
 private struct PhoneDashboardScreen: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var videoDownloadManager: VideoDownloadManager
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @State private var destination: PhoneDashboardDestination?
 
     var body: some View {
@@ -923,6 +1006,7 @@ private struct PhoneDashboardScreen: View {
                                         title: item.record.title,
                                         subtitle: item.record.sourceName,
                                         detail: item.record.sourceKind == .set ? "Video Set • Offline" : "Library Video • Offline",
+                                        playbackRecord: phonePlaybackRecord(for: item, using: videoPlaybackStore),
                                         actionTitle: "Play Offline",
                                         action: nil
                                     )
@@ -974,6 +1058,7 @@ private struct PhoneDashboardScreen: View {
                                     title: video.title,
                                     subtitle: video.author.isEmpty ? video.editor : video.author,
                                     detail: video.bookJournal,
+                                    playbackRecord: phonePlaybackRecord(for: video, using: videoPlaybackStore),
                                     actionTitle: "Play Video",
                                     action: nil
                                 )
@@ -1207,6 +1292,7 @@ private struct PhoneDashboardBookDetailScreen: View {
 
 private struct PhoneDashboardVideoSetDetailScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
 
     let set: VideoSet
     let onBack: () -> Void
@@ -1268,7 +1354,8 @@ private struct PhoneDashboardVideoSetDetailScreen: View {
                                 subtitle: entry.author.isEmpty ? entry.editor : entry.author,
                                 detail: entry.setName,
                                 badgeText: "Video",
-                                trailingText: "Play"
+                                trailingText: "Play",
+                                playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore)
                             )
                         }
                         .buttonStyle(.plain)
@@ -1321,6 +1408,7 @@ private struct PhoneInfoLine: View {
 
 private struct PhoneLibraryScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @State private var selectedLibrarySection: PhoneLibrarySection = .journals
     @State private var journalQuery = ""
     @State private var bookQuery = ""
@@ -1711,7 +1799,8 @@ private struct PhoneLibraryScreen: View {
                                 subtitle: video.author.isEmpty ? video.editor : video.author,
                                 detail: video.bookJournal,
                                 badgeText: "Video",
-                                trailingText: "Play"
+                                trailingText: "Play",
+                                playbackRecord: phonePlaybackRecord(for: video, using: videoPlaybackStore)
                             )
                         }
                         .buttonStyle(.plain)
@@ -1815,7 +1904,8 @@ private struct PhoneLibraryScreen: View {
                                 subtitle: entry.author.isEmpty ? entry.editor : entry.author,
                                 detail: entry.setName,
                                 badgeText: "Video",
-                                trailingText: "Play"
+                                trailingText: "Play",
+                                playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore)
                             )
                         }
                         .buttonStyle(.plain)
@@ -1925,6 +2015,7 @@ private struct PhoneLibraryScreen: View {
 
 private struct PhoneSearchExperienceScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @State private var query = ""
     @State private var lastQuery = ""
     @State private var selectedPage: PhoneSearchPage = .all
@@ -2014,7 +2105,8 @@ private struct PhoneSearchExperienceScreen: View {
                                     subtitle: video.author.isEmpty ? video.editor : video.author,
                                     detail: video.bookJournal,
                                     badgeText: "Video",
-                                    trailingText: "Play"
+                                    trailingText: "Play",
+                                    playbackRecord: phonePlaybackRecord(for: video, using: videoPlaybackStore)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -2028,7 +2120,8 @@ private struct PhoneSearchExperienceScreen: View {
                                     subtitle: entry.author.isEmpty ? entry.editor : entry.author,
                                     detail: entry.setName,
                                     badgeText: "Set",
-                                    trailingText: "Open"
+                                    trailingText: "Open",
+                                    playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -2067,6 +2160,7 @@ private struct PhoneSearchExperienceScreen: View {
 
 private struct PhoneHistoryExperienceScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @State private var selectedPage: PhoneHistoryPage = .all
     @State private var searchText = ""
 
@@ -2144,7 +2238,8 @@ private struct PhoneHistoryExperienceScreen: View {
                                 subtitle: entry.subtitle,
                                 detail: entry.detail,
                                 badgeText: entry.kind.title,
-                                trailingText: LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date())
+                                trailingText: LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date()),
+                                playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore)
                             )
                         }
                         .buttonStyle(.plain)
@@ -2202,6 +2297,7 @@ private struct PhoneHistoryExperienceScreen: View {
 
 private struct PhoneProfileExperienceScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @State private var selectedDetail: ProfileDetailSection?
     @State private var activeFavoriteBook: Book?
     @State private var activeFavoriteSet: VideoSet?
@@ -2456,7 +2552,8 @@ private struct PhoneProfileExperienceScreen: View {
                             subtitle: entry.subtitle,
                             detail: entry.detail,
                             badgeText: entry.kind.title,
-                            trailingText: LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date())
+                            trailingText: LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date()),
+                            playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore)
                         )
                     }
                     .buttonStyle(.plain)
@@ -2567,6 +2664,7 @@ private struct PhoneLibraryScreenBookDetail: View {
 
 private struct PhoneLibraryScreenVideoSetDetail: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     let set: VideoSet
 
     var body: some View {
@@ -2601,7 +2699,8 @@ private struct PhoneLibraryScreenVideoSetDetail: View {
                                 subtitle: entry.author.isEmpty ? entry.editor : entry.author,
                                 detail: entry.setName,
                                 badgeText: "Video",
-                                trailingText: "Play"
+                                trailingText: "Play",
+                                playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore)
                             )
                         }
                         .buttonStyle(.plain)

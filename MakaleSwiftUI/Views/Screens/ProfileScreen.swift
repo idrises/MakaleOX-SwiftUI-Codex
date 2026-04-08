@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileScreen: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @State private var activeFavoriteBook: Book?
     @State private var activeFavoriteVideoSet: VideoSet?
 
@@ -284,7 +285,8 @@ struct ProfileScreen: View {
                     } label: {
                         CompactMediaRowCard(
                             artworkURLs: historyArtworkURLs(for: entry),
-                            title: entry.title
+                            title: entry.title,
+                            playbackRecord: playbackRecord(for: entry)
                         ) {
                             Text(entry.subtitle)
                                 .font(.custom("Avenir Next Medium", size: 11))
@@ -311,6 +313,36 @@ struct ProfileScreen: View {
                 }
             }
         }
+    }
+
+    @MainActor
+    private func playbackRecord(for entry: HistoryEntry) -> VideoPlaybackRecord? {
+        switch entry.kind {
+        case .video, .videoSet:
+            break
+        case .article, .chapter:
+            return nil
+        }
+
+        if let directURL = URL(string: entry.urlString),
+           directURL.scheme != nil,
+           !directURL.isFileURL {
+            return videoPlaybackStore.record(forRemoteURL: directURL)
+        }
+
+        guard let reference = entry.reference else { return nil }
+        let remoteURL: URL?
+        switch reference.kind {
+        case .video:
+            remoteURL = LegacyConfig.videoRemoteURL(bookJournal: reference.primary, link: reference.secondary)
+        case .videoSet:
+            remoteURL = LegacyConfig.videoSetRemoteURL(setName: reference.primary, link: reference.secondary)
+        case .article, .chapter:
+            remoteURL = nil
+        }
+
+        guard let remoteURL else { return nil }
+        return videoPlaybackStore.record(forRemoteURL: remoteURL)
     }
 
     @ViewBuilder
