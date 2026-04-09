@@ -35,6 +35,10 @@ struct HistoryScreen: View {
     @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @AppStorage("history.page") private var selectedPageRawValue = HistoryPage.all.rawValue
     @State private var searchText = ""
+    @State private var visibleItemCount = 50
+    @State private var requestedFetchCount = 50
+
+    private let pageSize = 50
 
     var body: some View {
         ScrollView {
@@ -51,7 +55,11 @@ struct HistoryScreen: View {
                             HStack(spacing: 10) {
                                 if appState.session != nil {
                                     Button {
-                                        Task { await appState.refreshHistory(kind: selectedPage.historyKind) }
+                                        appState.prepareHistoryInBackgroundIfNeeded(
+                                            kind: selectedPage.historyKind,
+                                            minimumCount: requestedFetchCount,
+                                            force: true
+                                        )
                                     } label: {
                                         HStack(spacing: 6) {
                                             if appState.isRefreshingHistory {
@@ -87,8 +95,8 @@ struct HistoryScreen: View {
                         TextField("Filter title, source, author…", text: $searchText)
                             .textFieldStyle(.roundedBorder)
 
-                        if appState.isRefreshingHistory && pageEntries.isEmpty {
-                            Label("Syncing the latest history from the server...", systemImage: "arrow.triangle.2.circlepath")
+                        if let historyPreparationMessage = appState.historyPreparationMessage {
+                            Label(historyPreparationMessage, systemImage: "arrow.triangle.2.circlepath")
                                 .font(.custom("Avenir Next Medium", size: 12))
                                 .foregroundStyle(Palette.muted)
                         }
@@ -97,8 +105,8 @@ struct HistoryScreen: View {
 
                 if appState.isRefreshingHistory && pageEntries.isEmpty {
                     EmptyStateView(
-                        title: "Loading history",
-                        message: "Your recent items are being refreshed from the server.",
+                        title: "Preparing history",
+                        message: "Recent records are loading in the background. You can stay on this page while they arrive.",
                         symbolName: "clock.arrow.circlepath"
                     )
                 } else if filteredEntries.isEmpty {
@@ -109,10 +117,10 @@ struct HistoryScreen: View {
                     )
                 } else {
                     LazyVStack(spacing: 14) {
-                        ForEach(filteredEntries) { entry in
+                        ForEach(visibleEntries) { entry in
                             Button {
-                                let visibleEntries = filteredEntries
-                                Task { await appState.reopenHistoryEntry(entry, historyContext: visibleEntries) }
+                                let historyContext = visibleEntries
+                                Task { await appState.reopenHistoryEntry(entry, historyContext: historyContext) }
                             } label: {
                                 CompactMediaRowCard(
                                     artworkURLs: coverURLs(for: entry),
@@ -148,6 +156,18 @@ struct HistoryScreen: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                            .onAppear {
+                                loadMoreIfNeeded(currentEntry: entry)
+                            }
+                        }
+
+                        if appState.isRefreshingHistory {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                    .controlSize(.small)
+                                Spacer()
+                            }
                         }
                     }
                 }
@@ -155,9 +175,17 @@ struct HistoryScreen: View {
         }
         .task {
             applyPreferredPageSelection()
+            resetPaginationAndPrepareHistory()
         }
         .onChange(of: appState.historyNavigationToken) { _ in
             applyPreferredPageSelection()
+            resetPaginationAndPrepareHistory()
+        }
+        .onChange(of: selectedPageRawValue) { _ in
+            resetPaginationAndPrepareHistory()
+        }
+        .onChange(of: searchText) { _ in
+            visibleItemCount = pageSize
         }
     }
 
@@ -233,6 +261,10 @@ struct HistoryScreen: View {
         }
     }
 
+    private var visibleEntries: [HistoryEntry] {
+        Array(filteredEntries.prefix(visibleItemCount))
+    }
+
     private var emptyStateTitle: String {
         if hasActiveSearch {
             return "No history matched"
@@ -265,5 +297,33 @@ struct HistoryScreen: View {
         guard HistoryPage(rawValue: appState.preferredHistoryPageRawValue) != nil else { return }
         selectedPageRawValue = appState.preferredHistoryPageRawValue
         searchText = ""
+    }
+
+    private func resetPaginationAndPrepareHistory() {
+        visibleItemCount = pageSize
+        requestedFetchCount = pageSize
+        appState.prepareHistoryInBackgroundIfNeeded(
+            kind: selectedPage.historyKind,
+            minimumCount: requestedFetchCount,
+            force: false
+        )
+    }
+
+    private func loadMoreIfNeeded(currentEntry entry: HistoryEntry) {
+        guard visibleEntries.last?.id == entry.id else { return }
+
+        if visibleItemCount < filteredEntries.count {
+            visibleItemCount = min(visibleItemCount + pageSize, filteredEntries.count)
+        }
+
+        let nextFetchCount = max(visibleItemCount + pageSize, requestedFetchCount)
+        guard nextFetchCount > requestedFetchCount else { return }
+
+        requestedFetchCount = nextFetchCount
+        appState.prepareHistoryInBackgroundIfNeeded(
+            kind: selectedPage.historyKind,
+            minimumCount: nextFetchCount,
+            force: false
+        )
     }
 }

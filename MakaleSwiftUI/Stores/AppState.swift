@@ -127,6 +127,7 @@ final class AppState: ObservableObject {
     @Published var isLoadingChapters = false
     @Published var isLoadingVideoSetEntries = false
     @Published var isRefreshingHistory = false
+    @Published private(set) var historyPreparationMessage: String?
     @Published private(set) var hasLoadedVideoSetCatalog = false
     @Published var preferredHistoryPageRawValue = PreferredHistoryPage.all.rawValue
     @Published var historyNavigationToken = UUID()
@@ -159,6 +160,7 @@ final class AppState: ObservableObject {
         guard session != nil else { return }
         selectedSection = .dashboard
         syncPendingOpenEventsInBackground()
+        prepareHistoryInBackgroundIfNeeded()
     }
 
     func activate(email: String, keyPart1: String, keyPart2: String, keyPart3: String) async {
@@ -216,7 +218,7 @@ final class AppState: ObservableObject {
         case .search:
             break
         case .history:
-            await refreshHistory()
+            prepareHistoryInBackgroundIfNeeded()
         case .profile:
             await refreshProfile()
         }
@@ -229,12 +231,20 @@ final class AppState: ObservableObject {
         }
     }
 
-    func refreshHistory(kind: HistoryKind? = nil) async {
+    func refreshHistory(kind: HistoryKind? = nil, minimumCount: Int = 50, force: Bool = true) async {
         guard let session else { return }
+        guard force || shouldPrepareHistory(kind: kind, minimumCount: minimumCount) else { return }
+        guard !isRefreshingHistory else { return }
+
         isRefreshingHistory = true
+        historyPreparationMessage = historyMessage(for: kind, minimumCount: minimumCount)
 
         do {
-            let entries = try await self.repository.fetchHistory(email: session.email, kind: kind)
+            let entries = try await self.repository.fetchHistory(
+                email: session.email,
+                kind: kind,
+                limit: minimumCount
+            )
             let mergedEntries = mergeHistoryEntries(entries, kind: kind, email: session.email)
             self.historyStore.replace(with: mergedEntries, for: kind)
             self.hasLoadedHistory = true
@@ -245,6 +255,7 @@ final class AppState: ObservableObject {
             )
         }
 
+        historyPreparationMessage = nil
         isRefreshingHistory = false
     }
 
@@ -1359,6 +1370,21 @@ final class AppState: ObservableObject {
 
     func handleAppDidBecomeActive() {
         syncPendingOpenEventsInBackground()
+        prepareHistoryInBackgroundIfNeeded()
+    }
+
+    func prepareHistoryInBackgroundIfNeeded(
+        kind: HistoryKind? = nil,
+        minimumCount: Int = 50,
+        force: Bool = false
+    ) {
+        guard session != nil else { return }
+        guard force || shouldPrepareHistory(kind: kind, minimumCount: minimumCount) else { return }
+        guard !isRefreshingHistory else { return }
+
+        Task(priority: .utility) {
+            await self.refreshHistory(kind: kind, minimumCount: minimumCount, force: true)
+        }
     }
 
     private func loadEverything() async throws {
@@ -1554,6 +1580,24 @@ final class AppState: ObservableObject {
 
         return (serverEntries + localPendingEntries + existingLocalEntries)
             .sorted { $0.openedAt > $1.openedAt }
+    }
+
+    private func shouldPrepareHistory(kind: HistoryKind?, minimumCount: Int) -> Bool {
+        let currentCount = historyEntryCount(for: kind)
+        if !hasLoadedHistory {
+            return true
+        }
+        return currentCount < minimumCount
+    }
+
+    private func historyEntryCount(for kind: HistoryKind?) -> Int {
+        guard let kind else { return historyStore.entries.count }
+        return historyStore.entries.filter { $0.kind == kind }.count
+    }
+
+    private func historyMessage(for kind: HistoryKind?, minimumCount: Int) -> String {
+        let scopeTitle = kind?.title ?? "History"
+        return "\(scopeTitle) is being prepared in the background. The latest \(minimumCount) records will appear shortly."
     }
 
     private func syncPendingOpenEventsInBackground() {

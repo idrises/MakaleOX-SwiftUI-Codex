@@ -507,8 +507,8 @@ final class LegacyRepository {
         )
     }
 
-    func fetchHistory(email: String, kind: HistoryKind? = nil) async throws -> [HistoryEntry] {
-        let historyLimit = kind == nil ? 24 : 40
+    func fetchHistory(email: String, kind: HistoryKind? = nil, limit: Int = 50) async throws -> [HistoryEntry] {
+        let historyLimit = max(limit, 1)
 
         let articleRows: [SQLRow]
         if kind == nil || kind == .article {
@@ -718,8 +718,10 @@ final class LegacyRepository {
             )
         }
 
-        return (articleEntries + chapterEntries + videoEntries + videoSetEntries)
+        let sortedEntries = (articleEntries + chapterEntries + videoEntries + videoSetEntries)
             .sorted { $0.openedAt > $1.openedAt }
+
+        return Array(sortedEntries.prefix(historyLimit))
     }
 
     func clearHistory(email: String) async throws {
