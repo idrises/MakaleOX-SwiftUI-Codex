@@ -303,7 +303,7 @@ struct ProfileScreen: View {
                             HStack(spacing: 8) {
                                 StatusPill(text: entry.kind.title, tint: Palette.accent)
                                 Spacer()
-                                Text(LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date()))
+                                Text(LegacyDate.historyListFormatter.string(from: entry.openedAt))
                                     .font(.custom("Avenir Next Regular", size: 11))
                                     .foregroundStyle(Palette.muted)
                             }

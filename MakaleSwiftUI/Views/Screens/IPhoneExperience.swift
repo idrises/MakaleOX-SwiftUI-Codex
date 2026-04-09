@@ -2605,7 +2605,7 @@ private struct PhoneHistoryExperienceScreen: View {
                                 subtitle: entry.subtitle,
                                 detail: entry.detail,
                                 badgeText: entry.kind.title,
-                                trailingText: LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date()),
+                                trailingText: LegacyDate.historyListFormatter.string(from: entry.openedAt),
                                 playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore)
                             )
                         }
@@ -2919,7 +2919,7 @@ private struct PhoneProfileExperienceScreen: View {
                             subtitle: entry.subtitle,
                             detail: entry.detail,
                             badgeText: entry.kind.title,
-                            trailingText: LegacyDate.relativeFormatter.localizedString(for: entry.openedAt, relativeTo: Date()),
+                            trailingText: LegacyDate.historyListFormatter.string(from: entry.openedAt),
                             playbackRecord: phonePlaybackRecord(for: entry, using: videoPlaybackStore)
                         )
                     }
