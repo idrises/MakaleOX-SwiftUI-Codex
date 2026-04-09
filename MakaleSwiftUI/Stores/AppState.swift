@@ -161,7 +161,6 @@ final class AppState: ObservableObject {
         guard session != nil else { return }
         selectedSection = .dashboard
         syncPendingOpenEventsInBackground()
-        prepareHistoryInBackgroundIfNeeded()
     }
 
     func activate(email: String, keyPart1: String, keyPart2: String, keyPart3: String) async {
@@ -1372,7 +1371,9 @@ final class AppState: ObservableObject {
 
     func handleAppDidBecomeActive() {
         syncPendingOpenEventsInBackground()
-        prepareHistoryInBackgroundIfNeeded()
+        if selectedSection == .history {
+            prepareHistoryInBackgroundIfNeeded()
+        }
     }
 
     func prepareHistoryInBackgroundIfNeeded(
