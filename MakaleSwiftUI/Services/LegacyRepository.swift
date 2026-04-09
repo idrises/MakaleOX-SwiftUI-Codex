@@ -507,12 +507,10 @@ final class LegacyRepository {
         )
     }
 
-    func fetchHistory(email: String, kind: HistoryKind? = nil, limit: Int = 50) async throws -> [HistoryEntry] {
-        let historyLimit = max(limit, 1)
-
+    func fetchHistory(email: String, kind: HistoryKind? = nil) async throws -> [HistoryEntry] {
         let articleRows: [SQLRow]
         if kind == nil || kind == .article {
-            articleRows = try await fetchArticleHistory(email: email, limit: historyLimit)
+            articleRows = try await fetchArticleHistory(email: email)
         } else {
             articleRows = []
         }
@@ -522,10 +520,9 @@ final class LegacyRepository {
             chapterRows = try await gateway.query(
                 """
                 WITH recentChapterHistory AS (
-                    SELECT TOP \(historyLimit) chapter, book, [date]
+                    SELECT chapter, book, [date]
                     FROM usersOpenedChapter
                     WHERE usermail = ?
-                    ORDER BY [date] DESC
                 )
                 SELECT
                     resolved.name AS currentTitle,
@@ -557,10 +554,9 @@ final class LegacyRepository {
             videoRows = try await gateway.query(
                 """
                 WITH recentVideoHistory AS (
-                    SELECT TOP \(historyLimit) bookJournal, title, link, openedDate
+                    SELECT bookJournal, title, link, openedDate
                     FROM videoOpened
                     WHERE usermail = ?
-                    ORDER BY openedDate DESC
                 )
                 SELECT
                     resolved.title AS currentTitle,
@@ -593,10 +589,9 @@ final class LegacyRepository {
             videoSetRows = try await gateway.query(
                 """
                 WITH recentVideoSetHistory AS (
-                    SELECT TOP \(historyLimit) title, setName, author, openedDate
+                    SELECT title, setName, author, openedDate
                     FROM videoSetOpened
                     WHERE usermail = ?
-                    ORDER BY openedDate DESC
                 )
                 SELECT
                     resolved.title AS currentTitle,
@@ -721,7 +716,7 @@ final class LegacyRepository {
         let sortedEntries = (articleEntries + chapterEntries + videoEntries + videoSetEntries)
             .sorted { $0.openedAt > $1.openedAt }
 
-        return Array(sortedEntries.prefix(historyLimit))
+        return sortedEntries
     }
 
     func clearHistory(email: String) async throws {
@@ -779,26 +774,26 @@ final class LegacyRepository {
         )
     }
 
-    private func fetchArticleHistory(email: String, limit: Int) async throws -> [SQLRow] {
+    private func fetchArticleHistory(email: String) async throws -> [SQLRow] {
         do {
             return try await gateway.query(
-                articleHistoryQueryWithStoredReference(limit: limit),
+                articleHistoryQueryWithStoredReference(),
                 parameters: [email],
                 timeout: 90
             )
         } catch {
             return try await gateway.query(
-                legacyArticleHistoryQuery(limit: limit),
+                legacyArticleHistoryQuery(),
                 parameters: [email],
                 timeout: 90
             )
         }
     }
 
-    private func articleHistoryQueryWithStoredReference(limit: Int) -> String {
+    private func articleHistoryQueryWithStoredReference() -> String {
         """
         WITH recentArticleHistory AS (
-            SELECT TOP \(limit)
+            SELECT
                 Article,
                 Journal,
                 year,
@@ -810,7 +805,6 @@ final class LegacyRepository {
                 COALESCE(pdfLink, '') AS historyPdfLink
             FROM usersOpenedArticle
             WHERE usermail = ?
-            ORDER BY [date] DESC
         )
         SELECT
             COALESCE(NULLIF(resolved.MAKALE, ''), recentArticleHistory.Article) AS currentTitle,
@@ -849,13 +843,12 @@ final class LegacyRepository {
         """
     }
 
-    private func legacyArticleHistoryQuery(limit: Int) -> String {
+    private func legacyArticleHistoryQuery() -> String {
         """
         WITH recentArticleHistory AS (
-            SELECT TOP \(limit) Article, Journal, year, volume, [date]
+            SELECT Article, Journal, year, volume, [date]
             FROM usersOpenedArticle
             WHERE usermail = ?
-            ORDER BY [date] DESC
         )
         SELECT
             resolved.MAKALE AS currentTitle,

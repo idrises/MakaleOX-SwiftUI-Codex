@@ -2530,6 +2530,9 @@ private struct PhoneHistoryExperienceScreen: View {
     @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
     @State private var selectedPage: PhoneHistoryPage = .all
     @State private var searchText = ""
+    @State private var visibleItemCount = 50
+
+    private let pageSize = 50
 
     var body: some View {
         PhonePageScroll {
@@ -2594,9 +2597,9 @@ private struct PhoneHistoryExperienceScreen: View {
                 )
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(filteredEntries) { entry in
+                    ForEach(visibleEntries) { entry in
                         Button {
-                            let visibleEntries = filteredEntries
+                            let visibleEntries = visibleEntries
                             Task { await appState.reopenHistoryEntry(entry, historyContext: visibleEntries) }
                         } label: {
                             PhoneRowCard(
@@ -2610,15 +2613,26 @@ private struct PhoneHistoryExperienceScreen: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .onAppear {
+                            loadMoreIfNeeded(currentEntry: entry)
+                        }
                     }
                 }
             }
         }
         .task {
             applyPreferredPageSelection()
+            resetPaginationAndPrepareHistory()
         }
         .onChange(of: appState.historyNavigationToken) { _ in
             applyPreferredPageSelection()
+            resetPaginationAndPrepareHistory()
+        }
+        .onChange(of: selectedPage) { _ in
+            resetPaginationAndPrepareHistory()
+        }
+        .onChange(of: searchText) { _ in
+            visibleItemCount = pageSize
         }
     }
 
@@ -2641,6 +2655,10 @@ private struct PhoneHistoryExperienceScreen: View {
         }
     }
 
+    private var visibleEntries: [HistoryEntry] {
+        Array(filteredEntries.prefix(visibleItemCount))
+    }
+
     private var hasSearch: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -2659,6 +2677,21 @@ private struct PhoneHistoryExperienceScreen: View {
         default: selectedPage = .all
         }
         searchText = ""
+    }
+
+    private func resetPaginationAndPrepareHistory() {
+        visibleItemCount = pageSize
+        appState.prepareHistoryInBackgroundIfNeeded(
+            kind: selectedPage.historyKind,
+            minimumCount: pageSize,
+            force: false
+        )
+    }
+
+    private func loadMoreIfNeeded(currentEntry entry: HistoryEntry) {
+        guard visibleEntries.last?.id == entry.id else { return }
+        guard visibleItemCount < filteredEntries.count else { return }
+        visibleItemCount = min(visibleItemCount + pageSize, filteredEntries.count)
     }
 }
 

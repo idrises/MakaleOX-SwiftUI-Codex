@@ -149,6 +149,7 @@ final class AppState: ObservableObject {
     private let assetLibrary = AssetLibrary()
     private let openEventSyncService = OpenEventSyncService()
     private var hasLoadedHistory = false
+    private var loadedHistoryScopes: Set<String> = []
 
     init() {
         self.session = sessionStore.session
@@ -242,12 +243,12 @@ final class AppState: ObservableObject {
         do {
             let entries = try await self.repository.fetchHistory(
                 email: session.email,
-                kind: kind,
-                limit: minimumCount
+                kind: kind
             )
             let mergedEntries = mergeHistoryEntries(entries, kind: kind, email: session.email)
             self.historyStore.replace(with: mergedEntries, for: kind)
             self.hasLoadedHistory = true
+            self.loadedHistoryScopes.insert(historyScopeKey(for: kind))
         } catch {
             activeAlert = AppAlert(
                 title: "Something Went Wrong",
@@ -262,6 +263,7 @@ final class AppState: ObservableObject {
     func clearHistory() async {
         historyStore.clear()
         hasLoadedHistory = true
+        loadedHistoryScopes = []
     }
 
     func showProfileHistory(kind: HistoryKind) {
@@ -1493,6 +1495,7 @@ final class AppState: ObservableObject {
         hasLoadedVideoSetCatalog = false
         isRefreshingHistory = false
         hasLoadedHistory = false
+        loadedHistoryScopes = []
         clearScopedLibraryFilters()
         preferredHistoryPageRawValue = PreferredHistoryPage.all.rawValue
         historyNavigationToken = UUID()
@@ -1583,11 +1586,10 @@ final class AppState: ObservableObject {
     }
 
     private func shouldPrepareHistory(kind: HistoryKind?, minimumCount: Int) -> Bool {
-        let currentCount = historyEntryCount(for: kind)
         if !hasLoadedHistory {
             return true
         }
-        return currentCount < minimumCount
+        return !loadedHistoryScopes.contains(historyScopeKey(for: kind))
     }
 
     private func historyEntryCount(for kind: HistoryKind?) -> Int {
@@ -1597,7 +1599,11 @@ final class AppState: ObservableObject {
 
     private func historyMessage(for kind: HistoryKind?, minimumCount: Int) -> String {
         let scopeTitle = kind?.title ?? "History"
-        return "\(scopeTitle) is being prepared in the background. The latest \(minimumCount) records will appear shortly."
+        return "\(scopeTitle) is being prepared in the background. The first \(minimumCount) records will appear first, then the rest will stay available as you scroll."
+    }
+
+    private func historyScopeKey(for kind: HistoryKind?) -> String {
+        kind?.rawValue ?? "all"
     }
 
     private func syncPendingOpenEventsInBackground() {
