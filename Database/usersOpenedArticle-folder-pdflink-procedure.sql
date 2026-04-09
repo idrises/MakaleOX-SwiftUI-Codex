@@ -1,6 +1,9 @@
 /*
     Installs the shared repair procedure for dbo.usersOpenedArticle.
 
+    Compatible with older SQL Server versions that do not support
+    CREATE OR ALTER PROCEDURE.
+
     Usage after running this file once:
 
     EXEC dbo.RepairUsersOpenedArticleHistoryColumns
@@ -14,7 +17,19 @@
         @Verbose = 0;
 */
 
-CREATE OR ALTER PROCEDURE dbo.RepairUsersOpenedArticleHistoryColumns
+IF OBJECT_ID(N'dbo.RepairUsersOpenedArticleHistoryColumns', N'P') IS NULL
+BEGIN
+    EXEC (N'
+        CREATE PROCEDURE dbo.RepairUsersOpenedArticleHistoryColumns
+        AS
+        BEGIN
+            SET NOCOUNT ON;
+        END;
+    ');
+END;
+
+EXEC (N'
+ALTER PROCEDURE dbo.RepairUsersOpenedArticleHistoryColumns
     @BatchSize INT = 500,
     @MaxIterations INT = 1,
     @Verbose BIT = 1
@@ -27,22 +42,22 @@ BEGIN
         SET @BatchSize = 500;
     END;
 
-    IF COL_LENGTH('dbo.usersOpenedArticle', 'issueTitle') IS NULL
+    IF COL_LENGTH(''dbo.usersOpenedArticle'', ''issueTitle'') IS NULL
     BEGIN
         ALTER TABLE dbo.usersOpenedArticle ADD issueTitle NVARCHAR(255) NULL;
     END;
 
-    IF COL_LENGTH('dbo.usersOpenedArticle', 'folder') IS NULL
+    IF COL_LENGTH(''dbo.usersOpenedArticle'', ''folder'') IS NULL
     BEGIN
         ALTER TABLE dbo.usersOpenedArticle ADD folder NVARCHAR(255) NULL;
     END;
 
-    IF COL_LENGTH('dbo.usersOpenedArticle', 'pdfLink') IS NULL
+    IF COL_LENGTH(''dbo.usersOpenedArticle'', ''pdfLink'') IS NULL
     BEGIN
         ALTER TABLE dbo.usersOpenedArticle ADD pdfLink NVARCHAR(255) NULL;
     END;
 
-    IF OBJECT_ID('tempdb..#Progress') IS NOT NULL
+    IF OBJECT_ID(''tempdb..#Progress'') IS NOT NULL
     BEGIN
         DROP TABLE #Progress;
     END;
@@ -58,8 +73,8 @@ BEGIN
     DECLARE @RemainingRows BIGINT = 0;
     DECLARE @Iteration INT = 0;
 
-    DECLARE @BatchSql NVARCHAR(MAX) = N'
-    IF OBJECT_ID(''tempdb..#Targets'') IS NOT NULL
+    DECLARE @BatchSql NVARCHAR(MAX) = N''
+    IF OBJECT_ID(''''tempdb..#Targets'''') IS NOT NULL
     BEGIN
         DROP TABLE #Targets;
     END;
@@ -68,15 +83,15 @@ BEGIN
         ua.usermail,
         ua.Article,
         ua.Journal,
-        ISNULL(ua.year, '''') AS year,
-        ISNULL(ua.volume, '''') AS volume,
+        ISNULL(ua.year, '''''''') AS year,
+        ISNULL(ua.volume, '''''''') AS volume,
         ua.[date]
     INTO #Targets
     FROM dbo.usersOpenedArticle AS ua WITH (READPAST)
     WHERE
-        ISNULL(ua.folder, '''') = ''''
-        OR ISNULL(ua.pdfLink, '''') = ''''
-        OR ISNULL(ua.issueTitle, '''') = ''''
+        ISNULL(ua.folder, '''''''') = ''''''''''
+        OR ISNULL(ua.pdfLink, '''''''') = ''''''''''
+        OR ISNULL(ua.issueTitle, '''''''') = ''''''''''
     ORDER BY
         ua.[date] ASC,
         ua.Article ASC,
@@ -104,12 +119,12 @@ BEGIN
               AND m.dergi = t.Journal
             ORDER BY
                 CASE
-                    WHEN t.year <> ''''
+                    WHEN t.year <> ''''''''''
                      AND m.YIL = t.year THEN 0
                     ELSE 1
                 END,
                 CASE
-                    WHEN t.volume <> ''''
+                    WHEN t.volume <> ''''''''''
                      AND m.VOLUME = t.volume THEN 0
                     ELSE 1
                 END,
@@ -124,15 +139,15 @@ BEGIN
     UPDATE ua
     SET
         ua.issueTitle = CASE
-            WHEN ISNULL(ua.issueTitle, '''') = '''' THEN CandidateMatches.resolvedIssueTitle
+            WHEN ISNULL(ua.issueTitle, '''''''') = '''''''''' THEN CandidateMatches.resolvedIssueTitle
             ELSE ua.issueTitle
         END,
         ua.folder = CASE
-            WHEN ISNULL(ua.folder, '''') = '''' THEN CandidateMatches.resolvedFolder
+            WHEN ISNULL(ua.folder, '''''''') = '''''''''' THEN CandidateMatches.resolvedFolder
             ELSE ua.folder
         END,
         ua.pdfLink = CASE
-            WHEN ISNULL(ua.pdfLink, '''') = '''' THEN CandidateMatches.resolvedPdfLink
+            WHEN ISNULL(ua.pdfLink, '''''''') = '''''''''' THEN CandidateMatches.resolvedPdfLink
             ELSE ua.pdfLink
         END
     FROM dbo.usersOpenedArticle AS ua
@@ -140,8 +155,8 @@ BEGIN
         ON ua.usermail = CandidateMatches.usermail
        AND ua.Article = CandidateMatches.Article
        AND ua.Journal = CandidateMatches.Journal
-       AND ISNULL(ua.year, '''') = CandidateMatches.year
-       AND ISNULL(ua.volume, '''') = CandidateMatches.volume
+       AND ISNULL(ua.year, '''''''') = CandidateMatches.year
+       AND ISNULL(ua.volume, '''''''') = CandidateMatches.volume
        AND ua.[date] = CandidateMatches.[date];
 
     SELECT
@@ -151,11 +166,11 @@ BEGIN
             SELECT COUNT(*)
             FROM dbo.usersOpenedArticle
             WHERE
-                ISNULL(folder, '''') = ''''
-                OR ISNULL(pdfLink, '''') = ''''
-                OR ISNULL(issueTitle, '''') = ''''
+                ISNULL(folder, '''''''') = ''''''''''
+                OR ISNULL(pdfLink, '''''''') = ''''''''''
+                OR ISNULL(issueTitle, '''''''') = ''''''''''
         ) AS remainingRows;
-    ';
+    '';
 
     WHILE @RowsUpdated > 0
       AND (@MaxIterations = 0 OR @Iteration < @MaxIterations)
@@ -167,7 +182,7 @@ BEGIN
         INSERT INTO #Progress (rowsUpdated, rowsSelected, remainingRows)
         EXEC sys.sp_executesql
             @BatchSql,
-            N'@BatchSize INT',
+            N''@BatchSize INT'',
             @BatchSize = @BatchSize;
 
         SELECT TOP (1)
@@ -179,13 +194,13 @@ BEGIN
         IF @Verbose = 1
         BEGIN
             PRINT CONCAT(
-                'Iteration ',
+                ''Iteration '',
                 @Iteration,
-                ' | selected=',
+                '' | selected='',
                 @RowsSelected,
-                ' | updated=',
+                '' | updated='',
                 @RowsUpdated,
-                ' | remaining=',
+                '' | remaining='',
                 @RemainingRows
             );
         END;
@@ -199,17 +214,18 @@ BEGIN
     SELECT
         @Iteration AS iterationsRun,
         COUNT(*) AS totalRows,
-        SUM(CASE WHEN ISNULL(folder, '') <> '' THEN 1 ELSE 0 END) AS rowsWithFolder,
-        SUM(CASE WHEN ISNULL(pdfLink, '') <> '' THEN 1 ELSE 0 END) AS rowsWithPdfLink,
-        SUM(CASE WHEN ISNULL(issueTitle, '') <> '' THEN 1 ELSE 0 END) AS rowsWithIssueTitle,
+        SUM(CASE WHEN ISNULL(folder, '''''''') <> '''''''''' THEN 1 ELSE 0 END) AS rowsWithFolder,
+        SUM(CASE WHEN ISNULL(pdfLink, '''''''') <> '''''''''' THEN 1 ELSE 0 END) AS rowsWithPdfLink,
+        SUM(CASE WHEN ISNULL(issueTitle, '''''''') <> '''''''''' THEN 1 ELSE 0 END) AS rowsWithIssueTitle,
         SUM(
             CASE
-                WHEN ISNULL(folder, '') = ''
-                  OR ISNULL(pdfLink, '') = ''
-                  OR ISNULL(issueTitle, '') = ''
+                WHEN ISNULL(folder, '''''''') = ''''''''''
+                  OR ISNULL(pdfLink, '''''''') = ''''''''''
+                  OR ISNULL(issueTitle, '''''''') = ''''''''''
                 THEN 1
                 ELSE 0
             END
         ) AS remainingRows
     FROM dbo.usersOpenedArticle;
 END;
+');
