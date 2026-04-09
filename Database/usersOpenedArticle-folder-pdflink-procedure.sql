@@ -1,35 +1,28 @@
 /*
     Installs the shared repair procedure for dbo.usersOpenedArticle.
 
-    Compatible with older SQL Server versions that do not support
-    CREATE OR ALTER PROCEDURE.
+    Compatible with older SQL Server versions.
 
     Usage after running this file once:
 
     EXEC dbo.RepairUsersOpenedArticleHistoryColumns
         @BatchSize = 500,
-        @MaxIterations = 0,   -- run until no more rows are updated
+        @MaxIterations = 0,
         @Verbose = 1;
 
     EXEC dbo.RepairUsersOpenedArticleHistoryColumns
         @BatchSize = 500,
-        @MaxIterations = 1,   -- repair a single batch
+        @MaxIterations = 1,
         @Verbose = 0;
 */
 
-IF OBJECT_ID(N'dbo.RepairUsersOpenedArticleHistoryColumns', N'P') IS NULL
+IF OBJECT_ID(N'dbo.RepairUsersOpenedArticleHistoryColumns', N'P') IS NOT NULL
 BEGIN
-    EXEC (N'
-        CREATE PROCEDURE dbo.RepairUsersOpenedArticleHistoryColumns
-        AS
-        BEGIN
-            SET NOCOUNT ON;
-        END;
-    ');
+    DROP PROCEDURE dbo.RepairUsersOpenedArticleHistoryColumns;
 END;
 
 EXEC (N'
-ALTER PROCEDURE dbo.RepairUsersOpenedArticleHistoryColumns
+CREATE PROCEDURE dbo.RepairUsersOpenedArticleHistoryColumns
     @BatchSize INT = 500,
     @MaxIterations INT = 1,
     @Verbose BIT = 1
@@ -68,12 +61,19 @@ BEGIN
         remainingRows BIGINT NOT NULL
     );
 
-    DECLARE @RowsUpdated INT = 1;
-    DECLARE @RowsSelected INT = 0;
-    DECLARE @RemainingRows BIGINT = 0;
-    DECLARE @Iteration INT = 0;
+    DECLARE @RowsUpdated INT;
+    DECLARE @RowsSelected INT;
+    DECLARE @RemainingRows BIGINT;
+    DECLARE @Iteration INT;
+    DECLARE @Message NVARCHAR(400);
 
-    DECLARE @BatchSql NVARCHAR(MAX) = N''
+    SET @RowsUpdated = 1;
+    SET @RowsSelected = 0;
+    SET @RemainingRows = 0;
+    SET @Iteration = 0;
+
+    DECLARE @BatchSql NVARCHAR(MAX);
+    SET @BatchSql = N''
     IF OBJECT_ID(''''tempdb..#Targets'''') IS NOT NULL
     BEGIN
         DROP TABLE #Targets;
@@ -175,7 +175,7 @@ BEGIN
     WHILE @RowsUpdated > 0
       AND (@MaxIterations = 0 OR @Iteration < @MaxIterations)
     BEGIN
-        SET @Iteration += 1;
+        SET @Iteration = @Iteration + 1;
 
         DELETE FROM #Progress;
 
@@ -185,7 +185,7 @@ BEGIN
             N''@BatchSize INT'',
             @BatchSize = @BatchSize;
 
-        SELECT TOP (1)
+        SELECT TOP 1
             @RowsUpdated = rowsUpdated,
             @RowsSelected = rowsSelected,
             @RemainingRows = remainingRows
@@ -193,16 +193,12 @@ BEGIN
 
         IF @Verbose = 1
         BEGIN
-            PRINT CONCAT(
-                ''Iteration '',
-                @Iteration,
-                '' | selected='',
-                @RowsSelected,
-                '' | updated='',
-                @RowsUpdated,
-                '' | remaining='',
-                @RemainingRows
-            );
+            SET @Message =
+                N''Iteration '' + CAST(@Iteration AS NVARCHAR(20)) +
+                N'' | selected='' + CAST(@RowsSelected AS NVARCHAR(20)) +
+                N'' | updated='' + CAST(@RowsUpdated AS NVARCHAR(20)) +
+                N'' | remaining='' + CAST(@RemainingRows AS NVARCHAR(20));
+            PRINT @Message;
         END;
 
         IF @RowsSelected = 0 OR @RowsUpdated = 0
