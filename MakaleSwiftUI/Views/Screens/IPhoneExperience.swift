@@ -2545,7 +2545,9 @@ private struct PhoneSearchExperienceScreen: View {
 
     private func submitSearch() {
         lastQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        Task { await appState.runSearch(lastQuery) }
+        Task { @MainActor in
+            await appState.runSearch(lastQuery)
+        }
     }
 }
 

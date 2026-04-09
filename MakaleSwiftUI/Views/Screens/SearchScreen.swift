@@ -262,7 +262,7 @@ struct SearchScreen: View {
     private func submitSearch() {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         lastSubmittedQuery = trimmedQuery
-        Task {
+        Task { @MainActor in
             await appState.runSearch(trimmedQuery)
             selectBestPageAfterSearch()
         }

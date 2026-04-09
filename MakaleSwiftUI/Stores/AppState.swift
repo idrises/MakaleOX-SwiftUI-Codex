@@ -150,6 +150,7 @@ final class AppState: ObservableObject {
     private let openEventSyncService = OpenEventSyncService()
     private var hasLoadedHistory = false
     private var loadedHistoryScopes: Set<String> = []
+    private var historyPreparationTask: Task<Void, Never>?
 
     init() {
         self.session = sessionStore.session
@@ -605,9 +606,13 @@ final class AppState: ObservableObject {
         }
 
         currentSearchQuery = query
+        historyPreparationTask?.cancel()
+        historyPreparationTask = nil
+        historyPreparationMessage = nil
 
         await perform("Searching library") { [self] in
-            let session = try await self.syncSessionFromServer()
+            let session = try self.requireSession()
+            guard self.validateSession(session) else { return }
             self.searchResults = try await self.repository.search(text: query, subject: session.subject)
         }
     }
@@ -1385,7 +1390,8 @@ final class AppState: ObservableObject {
         guard force || shouldPrepareHistory(kind: kind, minimumCount: minimumCount) else { return }
         guard !isRefreshingHistory else { return }
 
-        Task(priority: .utility) {
+        historyPreparationTask?.cancel()
+        historyPreparationTask = Task(priority: .utility) {
             await self.refreshHistory(kind: kind, minimumCount: minimumCount, force: true)
         }
     }
@@ -1465,6 +1471,8 @@ final class AppState: ObservableObject {
     }
 
     private func resetRemoteContent() {
+        historyPreparationTask?.cancel()
+        historyPreparationTask = nil
         dashboard = DashboardSnapshot()
         journals = []
         selectedJournal = nil
