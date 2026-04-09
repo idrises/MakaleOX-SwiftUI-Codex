@@ -53,7 +53,10 @@ struct VideosScreen: View {
                 HStack(spacing: 10) {
                     SearchInputField(
                         placeholder: "Filter title, author, journal…",
-                        text: $searchText
+                        text: $searchText,
+                        onSubmitAction: {
+                            Task { await appState.loadVideos(search: searchText) }
+                        }
                     )
                     Button("Refresh Search") {
                         Task { await appState.loadVideos(search: searchText) }

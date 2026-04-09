@@ -153,6 +153,8 @@ struct ScreenHeader: View {
 struct SearchInputField: View {
     let placeholder: String
     @Binding var text: String
+    var submitLabel: SubmitLabel = .search
+    var onSubmitAction: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 10) {
@@ -162,6 +164,10 @@ struct SearchInputField: View {
 
             TextField(placeholder, text: $text)
                 .textFieldStyle(.plain)
+                .submitLabel(submitLabel)
+                .onSubmit {
+                    onSubmitAction?()
+                }
 
             if !text.isEmpty {
                 Button {

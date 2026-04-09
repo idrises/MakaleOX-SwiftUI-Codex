@@ -82,7 +82,10 @@ struct BooksScreen: View {
             HStack(spacing: 10) {
                 SearchInputField(
                     placeholder: "Filter title, editor, year…",
-                    text: $searchText
+                    text: $searchText,
+                    onSubmitAction: {
+                        Task { await appState.loadBooks(search: searchText) }
+                    }
                 )
                 Button("Refresh Search") {
                     Task { await appState.loadBooks(search: searchText) }

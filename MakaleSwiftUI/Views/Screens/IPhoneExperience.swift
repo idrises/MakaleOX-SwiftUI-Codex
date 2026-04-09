@@ -580,6 +580,8 @@ private struct PhoneSearchField: View {
     @Binding var text: String
     let buttonTitle: String
     let action: () -> Void
+    var submitLabel: SubmitLabel = .search
+    var onSubmitAction: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 10) {
@@ -590,6 +592,10 @@ private struct PhoneSearchField: View {
 
                 TextField(placeholder, text: $text)
                     .textFieldStyle(.plain)
+                    .submitLabel(submitLabel)
+                    .onSubmit {
+                        (onSubmitAction ?? action)()
+                    }
 
                 if !text.isEmpty {
                     Button {
