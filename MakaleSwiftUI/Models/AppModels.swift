@@ -906,6 +906,14 @@ enum LegacyDate {
         return formatter.string(from: Date())
     }
 
+    static var historyListFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale.current
+        formatter.dateFormat = "dd.MM.yyyy HH:mm"
+        return formatter
+    }
+
     static var relativeFormatter: RelativeDateTimeFormatter {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
