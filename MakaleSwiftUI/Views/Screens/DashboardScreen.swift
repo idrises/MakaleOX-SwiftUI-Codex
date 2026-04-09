@@ -29,7 +29,6 @@ struct DashboardScreen: View {
                     }
                 }
 
-                #if os(iOS)
                 if usesRefreshedIOSDashboard {
                     contentStrip(
                         title: "Activities",
@@ -91,7 +90,6 @@ struct DashboardScreen: View {
                         }
                     }
                 }
-                #endif
 
                 contentStrip(
                     title: "New Issues",
@@ -114,7 +112,6 @@ struct DashboardScreen: View {
                     }
                 }
 
-                #if os(iOS)
                 if usesRefreshedIOSDashboard {
                     contentStrip(
                         title: "Downloaded Content",
@@ -204,7 +201,6 @@ struct DashboardScreen: View {
                         }
                     }
                 }
-                #endif
 
                 contentStrip(
                     title: "Books",
@@ -323,7 +319,7 @@ struct DashboardScreen: View {
 #if os(iOS)
         horizontalSizeClass == .regular
 #else
-        false
+        true
 #endif
     }
 
