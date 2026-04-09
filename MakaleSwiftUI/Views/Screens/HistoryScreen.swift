@@ -92,8 +92,10 @@ struct HistoryScreen: View {
                         .frame(maxWidth: 440)
                         .controlSize(.small)
 
-                        TextField("Filter title, source, author…", text: $searchText)
-                            .textFieldStyle(.roundedBorder)
+                        SearchInputField(
+                            placeholder: "Filter title, source, author…",
+                            text: $searchText
+                        )
 
                         if let historyPreparationMessage = appState.historyPreparationMessage {
                             Label(historyPreparationMessage, systemImage: "arrow.triangle.2.circlepath")

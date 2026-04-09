@@ -80,8 +80,10 @@ struct BooksScreen: View {
             }
 
             HStack(spacing: 10) {
-                TextField("Filter title, editor, year…", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
+                SearchInputField(
+                    placeholder: "Filter title, editor, year…",
+                    text: $searchText
+                )
                 Button("Refresh Search") {
                     Task { await appState.loadBooks(search: searchText) }
                 }

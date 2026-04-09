@@ -106,8 +106,10 @@ struct JournalsScreen: View {
                     }
 
                     HStack(spacing: 10) {
-                        TextField("Filter title, ISSN, subject…", text: $searchText)
-                            .textFieldStyle(.roundedBorder)
+                        SearchInputField(
+                            placeholder: "Filter title, ISSN, subject…",
+                            text: $searchText
+                        )
                         Button("Refresh Search") {
                             Task { await appState.loadJournals(search: searchText) }
                         }

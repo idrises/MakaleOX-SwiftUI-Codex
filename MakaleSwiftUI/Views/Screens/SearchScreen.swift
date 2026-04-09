@@ -101,11 +101,13 @@ struct SearchScreen: View {
                         )
 
                         HStack(spacing: 10) {
-                            TextField("Search title, editor, author, ISBN, or subject", text: $query)
-                                .textFieldStyle(.roundedBorder)
-                                .onSubmit {
-                                    submitSearch()
-                                }
+                            SearchInputField(
+                                placeholder: "Search title, editor, author, ISBN, or subject",
+                                text: $query
+                            )
+                            .onSubmit {
+                                submitSearch()
+                            }
                             Button("Search") {
                                 submitSearch()
                             }

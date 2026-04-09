@@ -85,8 +85,10 @@ struct VideoSetsScreen: View {
                     }
 
                     HStack(spacing: 10) {
-                        TextField("Filter set name, editor, subject…", text: $searchText)
-                            .textFieldStyle(.roundedBorder)
+                        SearchInputField(
+                            placeholder: "Filter set name, editor, subject…",
+                            text: $searchText
+                        )
                         Button("Refresh") {
                             Task { await appState.refreshCurrentSection() }
                         }

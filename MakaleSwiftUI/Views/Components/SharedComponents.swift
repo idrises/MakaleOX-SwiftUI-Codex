@@ -150,6 +150,40 @@ struct ScreenHeader: View {
     }
 }
 
+struct SearchInputField: View {
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Palette.muted)
+
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.plain)
+
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Palette.muted.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(Palette.surfaceStrong, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.65), lineWidth: 1)
+        )
+    }
+}
+
 struct MetricChip: View {
     let label: String
     let value: String

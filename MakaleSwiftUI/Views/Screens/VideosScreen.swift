@@ -51,8 +51,10 @@ struct VideosScreen: View {
                 }
 
                 HStack(spacing: 10) {
-                    TextField("Filter title, author, journal…", text: $searchText)
-                        .textFieldStyle(.roundedBorder)
+                    SearchInputField(
+                        placeholder: "Filter title, author, journal…",
+                        text: $searchText
+                    )
                     Button("Refresh Search") {
                         Task { await appState.loadVideos(search: searchText) }
                     }

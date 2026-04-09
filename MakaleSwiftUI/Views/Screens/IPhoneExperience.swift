@@ -583,10 +583,28 @@ private struct PhoneSearchField: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            TextField(placeholder, text: $text)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Palette.muted)
+
+                TextField(placeholder, text: $text)
+                    .textFieldStyle(.plain)
+
+                if !text.isEmpty {
+                    Button {
+                        text = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Palette.muted.opacity(0.8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             Button(buttonTitle, action: action)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
