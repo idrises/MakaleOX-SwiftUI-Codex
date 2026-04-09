@@ -657,4 +657,35 @@ private struct SidebarAvatarImagePicker: UIViewControllerRepresentable {
         }
     }
 }
+#elseif os(macOS)
+extension MainShellView {
+    @ViewBuilder
+    private func sidebarSessionCard(_ session: SessionInfo) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(AppBranding.title)
+                .font(.custom("Avenir Next Demi Bold", size: 14))
+                .foregroundStyle(Palette.highlight)
+
+            Text(session.displayName)
+                .font(.custom("Avenir Next Demi Bold", size: 15))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(session.expireDate.isEmpty ? "Renew date -" : "Renew date \(session.expireDate)")
+                .font(.custom("Avenir Next Medium", size: 11))
+                .foregroundStyle(Palette.muted)
+                .lineLimit(1)
+
+            Text(session.isExpired ? "Expired" : "Active")
+                .font(.custom("Avenir Next Demi Bold", size: 10))
+                .foregroundStyle(session.isExpired ? Palette.danger : Palette.accent)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(
+                    (session.isExpired ? Palette.danger : Palette.accent).opacity(0.10),
+                    in: Capsule()
+                )
+        }
+    }
+}
 #endif

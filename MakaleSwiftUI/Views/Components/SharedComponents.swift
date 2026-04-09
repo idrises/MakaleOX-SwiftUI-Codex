@@ -950,40 +950,59 @@ struct VideoPlayerScreen: View {
     }
 
     var body: some View {
-        Group {
+        if #available(macOS 14.0, *) {
+            Group {
 #if os(iOS)
-            iosVideoBody
+                iosVideoBody
 #else
-            macVideoBody
+                macVideoBody
 #endif
-        }
-        .onAppear {
-            installPeriodicProgressObserverIfNeeded()
-            preparePlayback(for: currentItem, replaceCurrentItem: false)
-        }
-        .onDisappear {
-            persistCurrentPlaybackProgress()
-            player.pause()
-            removePlayerObservers()
-#if os(iOS)
-            selectionCommitTask?.cancel()
-#endif
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase != .active {
-                persistCurrentPlaybackProgress()
             }
+            .onAppear {
+                installPeriodicProgressObserverIfNeeded()
+                preparePlayback(for: currentItem, replaceCurrentItem: false)
+            }
+            .onDisappear {
+                persistCurrentPlaybackProgress()
+                player.pause()
+                removePlayerObservers()
+#if os(iOS)
+                selectionCommitTask?.cancel()
+#endif
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase != .active {
+                    persistCurrentPlaybackProgress()
+                }
+            }
+        } else {
+            // Fallback on earlier versions
         }
     }
 
 #if os(macOS)
     private var macVideoBody: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack {
+            HStack(spacing: 12) {
                 Button(action: onClose) {
-                    Label(backLabel, systemImage: "chevron.left")
-                        .font(.custom("Avenir Next Demi Bold", size: 13))
-                        .foregroundStyle(Palette.muted)
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(backLabel)
+                            .font(.custom("Avenir Next Demi Bold", size: 13))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(Palette.ink)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.78))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
 
@@ -992,15 +1011,19 @@ struct VideoPlayerScreen: View {
                 downloadActionButton
             }
 
-            ScreenHeader(
-                eyebrow: "Video",
-                title: currentItem.title,
-                subtitle: "",
-                titleSize: videoTitleSize
-            )
+            VStack(alignment: .leading, spacing: 8) {
+                Text("PLAYING NOW")
+                    .font(.custom("Avenir Next Demi Bold", size: 11))
+                    .tracking(1.4)
+                    .foregroundStyle(Palette.highlight)
+
+                Text(currentItem.title)
+                    .font(.custom("Avenir Next Medium", size: videoTitleSize))
+                    .foregroundStyle(Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             SectionCard {
-#if os(macOS)
                 ZStack(alignment: .bottomTrailing) {
                     MacVideoPlayerContainer(player: player)
                         .frame(maxWidth: .infinity)
@@ -1020,11 +1043,55 @@ struct VideoPlayerScreen: View {
                     .padding(.trailing, 24)
                     .padding(.bottom, 22)
                 }
-#else
-                IOSInlineVideoPlayerContainer(player: player)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 420)
-#endif
+            }
+
+            SectionCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Video details")
+                        .font(.custom("Avenir Next Demi Bold", size: 15))
+                        .foregroundStyle(Palette.ink)
+
+                    MacVideoMetaCard(
+                        systemImage: currentItem.sourceKind.systemImage,
+                        title: currentItem.sourceKind.cardTitle,
+                        detail: currentItem.sourceName,
+                        caption: currentItem.sourceDetail.isEmpty ? currentItem.sourceKind.summaryPrefix : currentItem.sourceDetail
+                    )
+                }
+            }
+
+            if railItems.count > 1 {
+                SectionCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(video.railTitle)
+                            .font(.custom("Avenir Next Demi Bold", size: 16))
+                            .foregroundStyle(Palette.ink)
+
+                        if !video.railSubtitle.isEmpty {
+                            Text(video.railSubtitle)
+                                .font(.custom("Avenir Next Medium", size: 12))
+                                .foregroundStyle(Palette.muted)
+                        }
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: 14) {
+                                ForEach(railItems) { item in
+                                    Button {
+                                        activateRailItem(withID: item.id)
+                                    } label: {
+                                        MacVideoRailCard(
+                                            item: item,
+                                            isFocused: currentItem.id == item.id
+                                        )
+                                        .frame(width: 252)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
             }
         }
     }
@@ -1249,6 +1316,17 @@ struct VideoPlayerScreen: View {
                 )
 #else
                 .font(.custom("Avenir Next Demi Bold", size: 12))
+                .foregroundStyle(Palette.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(downloadButtonMacBackgroundColor)
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(downloadButtonMacBorderColor, lineWidth: 1)
+                )
 #endif
         }
         .buttonStyle(.plain)
@@ -1393,6 +1471,36 @@ struct VideoPlayerScreen: View {
             return Palette.gold
         default:
             return Color.white
+        }
+    }
+#else
+    private var downloadButtonMacBackgroundColor: Color {
+        switch currentDownloadState {
+        case .downloaded(_):
+            return Palette.accent.opacity(0.16)
+        case .paused(_):
+            return Palette.gold.opacity(0.16)
+        case .queued(_), .downloading(_):
+            return Palette.highlight.opacity(0.12)
+        case .failed(_):
+            return Palette.danger.opacity(0.16)
+        case .notDownloaded:
+            return Color.white.opacity(0.78)
+        }
+    }
+
+    private var downloadButtonMacBorderColor: Color {
+        switch currentDownloadState {
+        case .downloaded(_):
+            return Palette.accent.opacity(0.34)
+        case .paused(_):
+            return Palette.gold.opacity(0.34)
+        case .queued(_), .downloading(_):
+            return Palette.highlight.opacity(0.28)
+        case .failed(_):
+            return Palette.danger.opacity(0.34)
+        case .notDownloaded:
+            return Color.black.opacity(0.08)
         }
     }
 #endif
@@ -1615,6 +1723,102 @@ private struct IOSVideoRailCard: View {
         .scaleEffect(isFocused ? 1 : 0.94)
         .shadow(color: .black.opacity(isFocused ? 0.24 : 0.10), radius: isFocused ? 18 : 10, y: isFocused ? 10 : 6)
         .animation(.spring(response: 0.28, dampingFraction: 0.84), value: isFocused)
+    }
+}
+#endif
+
+#if os(macOS)
+private struct MacVideoMetaCard: View {
+    let systemImage: String
+    let title: String
+    let detail: String
+    let caption: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Palette.highlight)
+                .frame(width: 38, height: 38)
+                .background(Palette.highlight.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.custom("Avenir Next Demi Bold", size: 11))
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(1)
+
+                Text(detail)
+                    .font(.custom("Avenir Next Demi Bold", size: 15))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if !caption.isEmpty {
+                    Text(caption)
+                        .font(.custom("Avenir Next Medium", size: 12))
+                        .foregroundStyle(Palette.muted)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.82))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.black.opacity(0.06), lineWidth: 1)
+        )
+    }
+}
+
+private struct MacVideoRailCard: View {
+    let item: VideoRailItem
+    let isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            RemoteArtworkView(
+                urls: item.artworkURLs,
+                aspectRatio: 1.22,
+                cornerRadius: 18,
+                imageAlignment: .center,
+                imageContentMode: .fill
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.custom("Avenir Next Demi Bold", size: 13))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(item.detail.isEmpty ? item.subtitle : item.detail)
+                    .font(.custom("Avenir Next Medium", size: 11))
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(isFocused ? Palette.accentSoft.opacity(0.92) : Color.white.opacity(0.80))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(isFocused ? Palette.accent.opacity(0.72) : Color.black.opacity(0.06), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(isFocused ? 0.10 : 0.05), radius: isFocused ? 16 : 10, y: isFocused ? 8 : 4)
+        .scaleEffect(isFocused ? 1 : 0.98)
+        .animation(.spring(response: 0.26, dampingFraction: 0.86), value: isFocused)
     }
 }
 #endif

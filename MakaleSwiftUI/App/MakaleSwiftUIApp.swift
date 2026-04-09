@@ -28,7 +28,7 @@ struct MakaleSwiftUIApp: App {
                 await appState.bootstrap()
                 videoDownloadManager.restorePendingTasksIfNeeded()
             }
-            .onChange(of: scenePhase) { _, newPhase in
+            .onChange(of: scenePhase) { newPhase in
                 guard newPhase == .active else { return }
                 appState.handleAppDidBecomeActive()
             }
