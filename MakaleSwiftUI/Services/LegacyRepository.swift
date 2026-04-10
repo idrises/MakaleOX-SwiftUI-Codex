@@ -599,6 +599,7 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
                     SELECT TOP \(historyLimit) bookJournal, title, link, openedDate
                     FROM videoOpened
                     WHERE usermail = ?
+                        AND openedDate IS NOT NULL
                     ORDER BY openedDate DESC
                 )
                 SELECT
@@ -636,6 +637,7 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
                     SELECT TOP \(historyLimit) title, setName, author, openedDate
                     FROM videoSetOpened
                     WHERE usermail = ?
+                        AND openedDate IS NOT NULL
                     ORDER BY openedDate DESC
                 )
                 SELECT

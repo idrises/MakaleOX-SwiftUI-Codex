@@ -982,7 +982,17 @@ enum LegacyDate {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
+        let normalizedWhitespace = trimmed.replacingOccurrences(
+            of: #"\s+"#,
+            with: " ",
+            options: .regularExpression
+        )
+
         if let date = serverDate(from: trimmed) {
+            return date
+        }
+
+        if normalizedWhitespace != trimmed, let date = serverDate(from: normalizedWhitespace) {
             return date
         }
 
@@ -990,17 +1000,39 @@ enum LegacyDate {
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
 
-        let formats = [
+        let posixFormats = [
             "yyyy-MM-dd HH:mm:ss Z",
             "yyyy-MM-dd HH:mm:ss",
             "yyyy-MM-dd",
             "yyyy-MM-dd HH:mm:ss +0000",
-            "yyyy-MM-dd HH:mm:ss 'UTC'"
+            "yyyy-MM-dd HH:mm:ss 'UTC'",
+            "dd.MM.yyyy HH:mm:ss",
+            "dd.MM.yyyy",
+            "MMM d yyyy h:mma",
+            "MMM d yyyy hh:mma",
+            "EEEE, MMMM d, yyyy",
+            "EEEE, MMMM d, yyyy h:mma",
+            "EEEE, MMMM d, yyyy hh:mma"
         ]
 
-        for format in formats {
+        for format in posixFormats {
             formatter.dateFormat = format
-            if let date = formatter.date(from: trimmed) {
+            if let date = formatter.date(from: normalizedWhitespace) {
+                return date
+            }
+        }
+
+        formatter.locale = Locale(identifier: "tr_TR")
+        let turkishFormats = [
+            "dd.MM.yyyy EEEE HH:mm:ss",
+            "dd.MM.yyyy EEEE",
+            "dd.MM.yyyy HH:mm:ss",
+            "dd.MM.yyyy"
+        ]
+
+        for format in turkishFormats {
+            formatter.dateFormat = format
+            if let date = formatter.date(from: normalizedWhitespace) {
                 return date
             }
         }
