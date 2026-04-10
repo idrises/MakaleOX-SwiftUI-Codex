@@ -137,60 +137,99 @@ final class LegacyRepository {
         }
     }
 
-    func fetchSession(email: String, serial: String) async throws -> SessionInfo {
-        let userRows = try await gateway.query(
-            "SELECT TOP 1 * FROM newUsers WHERE cdkey = ? AND Kulmail = ?",
-            parameters: [serial, email],
-            timeout: 90
-        )
+func fetchSession(email: String, serial: String) async throws -> SessionInfo {
+    let normalizedEmail = normalizedActivationEmail(email)
+    let normalizedSerial = normalizedActivationSerial(serial)
+    let userRows = try await gateway.query(
+        "SELECT TOP 1 * FROM newUsers WHERE cdkey = ? AND Kulmail = ?",
+        parameters: [normalizedSerial, normalizedEmail],
+        timeout: 90
+    )
 
-        guard let row = userRows.first else {
-            throw RepositoryError.invalidCredentials
-        }
-
-        return SessionInfo(
-            email: email,
-            userID: row.string("userID", "userid", "ID", "id"),
-            subject: row.string("subject"),
-            expireDate: row.string("expireDate"),
-            serial: serial,
-            firstName: row.string("FirstName"),
-            lastName: row.string("LastName")
-        )
+    guard let row = userRows.first else {
+        throw RepositoryError.invalidCredentials
     }
 
-    func activate(email: String, keyPart1: String, keyPart2: String, keyPart3: String) async throws -> SessionInfo {
-        let serial = [keyPart1, keyPart2, keyPart3].joined(separator: "-").uppercased()
-        let session = try await fetchSession(email: email, serial: serial)
-        let userRows = try await gateway.query(
-            "SELECT TOP 1 * FROM newUsers WHERE cdkey = ? AND Kulmail = ?",
-            parameters: [serial, email],
-            timeout: 90
-        )
-        guard let row = userRows.first else { throw RepositoryError.invalidCredentials }
+    return SessionInfo(
+        email: normalizedEmail,
+        userID: row.string("userID", "userid", "ID", "id"),
+        subject: row.string("subject"),
+        expireDate: row.string("expireDate"),
+        serial: normalizedSerial,
+        firstName: row.string("FirstName"),
+        lastName: row.string("LastName")
+    )
+}
 
-        let activationLimit = Int(row.string("activate")) ?? 0
-        let activationRows = try await gateway.query(
-            "SELECT COUNT(*) AS activationCount FROM activation WHERE cdkey = ? AND Kulmail = ?",
-            parameters: [serial, email],
-            timeout: 90
-        )
+func activate(email: String, keyPart1: String, keyPart2: String, keyPart3: String) async throws -> SessionInfo {
+    let normalizedEmail = normalizedActivationEmail(email)
+    let serial = normalizedActivationSerial(parts: [keyPart1, keyPart2, keyPart3])
+    let session = try await fetchSession(email: normalizedEmail, serial: serial)
+    let userRows = try await gateway.query(
+        "SELECT TOP 1 * FROM newUsers WHERE cdkey = ? AND Kulmail = ?",
+        parameters: [serial, normalizedEmail],
+        timeout: 90
+    )
+    guard let row = userRows.first else { throw RepositoryError.invalidCredentials }
 
-        let activationCount = Int(activationRows.first?.string("activationCount") ?? "0") ?? 0
-        if activationLimit > 0, activationCount >= activationLimit {
-            throw RepositoryError.activationLimitReached
-        }
+    let activationLimit = Int(row.string("activate")) ?? 0
+    let activationRows = try await gateway.query(
+        "SELECT COUNT(*) AS activationCount FROM activation WHERE cdkey = ? AND Kulmail = ?",
+        parameters: [serial, normalizedEmail],
+        timeout: 90
+    )
 
-        try await gateway.execute(
-            "INSERT INTO activation (cdkey, KulMacAdres, Kulmail, ip, Date, CpuId) VALUES (?, ?, ?, ?, GETDATE(), ?)",
-            parameters: [serial, "swiftui", email, "swiftui", "swiftui"],
-            timeout: 90
-        )
-
-        return session
+    let activationCount = Int(activationRows.first?.string("activationCount") ?? "0") ?? 0
+    if activationLimit > 0, activationCount >= activationLimit {
+        throw RepositoryError.activationLimitReached
     }
 
-    func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
+    try await gateway.execute(
+        "INSERT INTO activation (cdkey, KulMacAdres, Kulmail, ip, Date, CpuId) VALUES (?, ?, ?, ?, GETDATE(), ?)",
+        parameters: [serial, "swiftui", normalizedEmail, "swiftui", "swiftui"],
+        timeout: 90
+    )
+
+    return session
+}
+
+private func normalizedActivationEmail(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+private func normalizedActivationSerial(_ value: String) -> String {
+    normalizedActivationSerial(parts: value.split(separator: "-").map(String.init))
+}
+
+private func normalizedActivationSerial(parts: [String]) -> String {
+    parts
+        .map(normalizedActivationSerialSegment)
+        .joined(separator: "-")
+}
+
+private func normalizedActivationSerialSegment(_ value: String) -> String {
+    let remapped = value
+        .replacingOccurrences(of: "ı", with: "i")
+        .replacingOccurrences(of: "İ", with: "i")
+        .replacingOccurrences(of: "I", with: "i")
+        .replacingOccurrences(of: "ç", with: "c")
+        .replacingOccurrences(of: "Ç", with: "c")
+        .replacingOccurrences(of: "ğ", with: "g")
+        .replacingOccurrences(of: "Ğ", with: "g")
+        .replacingOccurrences(of: "ö", with: "o")
+        .replacingOccurrences(of: "Ö", with: "o")
+        .replacingOccurrences(of: "ş", with: "s")
+        .replacingOccurrences(of: "Ş", with: "s")
+        .replacingOccurrences(of: "ü", with: "u")
+        .replacingOccurrences(of: "Ü", with: "u")
+    let folded = remapped.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+    let uppercased = folded.uppercased(with: Locale(identifier: "en_US_POSIX"))
+    let allowedScalars = uppercased.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) && $0.isASCII }
+    return String(String.UnicodeScalarView(allowedScalars))
+}
+
+func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
+
         let predicate = subjectPredicate(subject)
         let journalCountRows = try await gateway.query(
             "SELECT COUNT(*) AS itemCount FROM dergi WHERE \(predicate.sql)",

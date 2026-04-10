@@ -85,8 +85,7 @@ struct ActivationScreen: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("E-mail")
                         .font(.custom("Avenir Next Demi Bold", size: 13))
-                    TextField("name@example.com", text: $email)
-                        .textFieldStyle(.roundedBorder)
+                    emailField
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -102,10 +101,10 @@ struct ActivationScreen: View {
                 Button {
                     Task {
                         await appState.activate(
-                            email: email.trimmingCharacters(in: .whitespacesAndNewlines),
-                            keyPart1: keyPart1.trimmingCharacters(in: .whitespacesAndNewlines),
-                            keyPart2: keyPart2.trimmingCharacters(in: .whitespacesAndNewlines),
-                            keyPart3: keyPart3.trimmingCharacters(in: .whitespacesAndNewlines)
+                            email: normalizedEmail(email),
+                            keyPart1: keyPart1,
+                            keyPart2: keyPart2,
+                            keyPart3: keyPart3
                         )
                     }
                 } label: {
@@ -130,13 +129,60 @@ struct ActivationScreen: View {
         }
     }
 
+    private var emailField: some View {
+        let field = TextField("name@example.com", text: $email)
+            .textFieldStyle(.roundedBorder)
+        #if os(iOS)
+        return field
+            .keyboardType(.emailAddress)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .textContentType(.emailAddress)
+        #else
+        return field
+        #endif
+    }
+
     private func serialField(text: Binding<String>) -> some View {
-        TextField("XXXXX", text: text)
+        let field = TextField("XXXXX", text: text)
             .textFieldStyle(.roundedBorder)
             .font(.custom("Avenir Next Demi Bold", size: 16))
             .onChange(of: text.wrappedValue) { newValue in
-                text.wrappedValue = String(newValue.uppercased().prefix(5))
+                text.wrappedValue = normalizedSerialSegment(newValue)
             }
+        #if os(iOS)
+        return field
+            .keyboardType(.asciiCapable)
+            .textInputAutocapitalization(.characters)
+            .autocorrectionDisabled()
+        #else
+        return field
+        #endif
+    }
+
+    private func normalizedEmail(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func normalizedSerialSegment(_ value: String) -> String {
+        let remapped = value
+            .replacingOccurrences(of: "ı", with: "i")
+            .replacingOccurrences(of: "İ", with: "i")
+            .replacingOccurrences(of: "I", with: "i")
+            .replacingOccurrences(of: "ç", with: "c")
+            .replacingOccurrences(of: "Ç", with: "c")
+            .replacingOccurrences(of: "ğ", with: "g")
+            .replacingOccurrences(of: "Ğ", with: "g")
+            .replacingOccurrences(of: "ö", with: "o")
+            .replacingOccurrences(of: "Ö", with: "o")
+            .replacingOccurrences(of: "ş", with: "s")
+            .replacingOccurrences(of: "Ş", with: "s")
+            .replacingOccurrences(of: "ü", with: "u")
+            .replacingOccurrences(of: "Ü", with: "u")
+        let folded = remapped.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+        let uppercased = folded.uppercased(with: Locale(identifier: "en_US_POSIX"))
+        let allowedScalars = uppercased.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) && $0.isASCII }
+        return String(String.UnicodeScalarView(allowedScalars).prefix(5))
     }
 
     private func layoutMetrics(for size: CGSize) -> ActivationLayoutMetrics {
