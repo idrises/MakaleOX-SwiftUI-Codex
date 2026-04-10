@@ -1,5 +1,8 @@
 import Foundation
 import OSLog
+#if os(iOS)
+import UIKit
+#endif
 
 private enum HistoryReopenError: LocalizedError {
     case unresolved
@@ -154,6 +157,9 @@ final class AppState: ObservableObject {
     private var lastHistoryRefreshDates: [String: Date] = [:]
     private var historyPreparationTask: Task<Void, Never>?
     private let historyAutoRefreshInterval: TimeInterval = 120
+#if os(iOS)
+    private var historyRefreshBackgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+#endif
 
     init() {
         self.session = sessionStore.session
@@ -242,6 +248,7 @@ final class AppState: ObservableObject {
 
         isRefreshingHistory = true
         historyPreparationMessage = historyMessage(for: kind, minimumCount: minimumCount)
+        beginHistoryRefreshBackgroundTaskIfNeeded()
 
         do {
             let entries = try await self.repository.fetchHistory(
@@ -260,14 +267,17 @@ final class AppState: ObservableObject {
             )
             self.lastHistoryRefreshDates[scopeKey] = Date()
         } catch {
-            activeAlert = AppAlert(
-                title: "Something Went Wrong",
-                message: error.localizedDescription
-            )
+            if !(error is CancellationError) {
+                activeAlert = AppAlert(
+                    title: "Something Went Wrong",
+                    message: error.localizedDescription
+                )
+            }
         }
 
         historyPreparationMessage = nil
         isRefreshingHistory = false
+        endHistoryRefreshBackgroundTaskIfNeeded()
     }
 
     func clearHistory() async {
@@ -1663,4 +1673,28 @@ final class AppState: ObservableObject {
             self.syncPendingOpenEventsInBackground()
         }
     }
+
+#if os(iOS)
+    private func beginHistoryRefreshBackgroundTaskIfNeeded() {
+        guard historyRefreshBackgroundTaskID == .invalid else { return }
+
+        historyRefreshBackgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "HistoryRefresh") { [weak self] in
+            Task { @MainActor in
+                self?.historyPreparationTask?.cancel()
+                self?.isRefreshingHistory = false
+                self?.historyPreparationMessage = nil
+                self?.endHistoryRefreshBackgroundTaskIfNeeded()
+            }
+        }
+    }
+
+    private func endHistoryRefreshBackgroundTaskIfNeeded() {
+        guard historyRefreshBackgroundTaskID != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(historyRefreshBackgroundTaskID)
+        historyRefreshBackgroundTaskID = .invalid
+    }
+#else
+    private func beginHistoryRefreshBackgroundTaskIfNeeded() {}
+    private func endHistoryRefreshBackgroundTaskIfNeeded() {}
+#endif
 }
