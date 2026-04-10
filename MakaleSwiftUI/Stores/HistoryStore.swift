@@ -21,9 +21,6 @@ final class HistoryStore: ObservableObject {
     func add(_ entry: HistoryEntry) {
         entries.removeAll { $0.deduplicationKey == entry.deduplicationKey }
         entries.insert(entry, at: 0)
-        if entries.count > 200 {
-            entries = Array(entries.prefix(200))
-        }
         persist()
     }
 
