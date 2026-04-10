@@ -124,6 +124,32 @@ private enum PhoneHistoryPage: String, CaseIterable, Identifiable {
     }
 }
 
+private struct PhoneHistoryCountChipLabel: View {
+    let title: String
+    let count: Int
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+
+            ZStack {
+                Circle()
+                    .fill(isSelected ? Color.white.opacity(0.22) : Palette.accent.opacity(0.10))
+
+                Text(count > 99 ? "99+" : "\(count)")
+                    .font(.system(size: count > 99 ? 9 : 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(isSelected ? Color.white : Palette.accent)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(width: 24, height: 24)
+        }
+    }
+}
+
 private enum PhoneCombinedSearchItem: Identifiable {
     case article(Article)
     case chapter(Chapter)
@@ -2601,15 +2627,18 @@ private struct PhoneHistoryExperienceScreen: View {
                         Button {
                             selectedPage = page
                         } label: {
-                            Text(page.title(count: entryCount(for: page)))
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(selectedPage == page ? Color.white : Palette.ink)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(
-                                    Capsule()
-                                        .fill(selectedPage == page ? Palette.accent : Color.white.opacity(0.84))
-                                )
+                            PhoneHistoryCountChipLabel(
+                                title: page.title,
+                                count: entryCount(for: page),
+                                isSelected: selectedPage == page
+                            )
+                            .foregroundStyle(selectedPage == page ? Color.white : Palette.ink)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(
+                                Capsule()
+                                    .fill(selectedPage == page ? Palette.accent : Color.white.opacity(0.84))
+                            )
                         }
                         .buttonStyle(.plain)
                     }

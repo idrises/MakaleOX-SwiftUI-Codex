@@ -34,6 +34,32 @@ private enum HistoryPage: String, CaseIterable, Identifiable {
     }
 }
 
+private struct HistoryCountChipLabel: View {
+    let title: String
+    let count: Int
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.custom("Avenir Next Demi Bold", size: 12))
+                .lineLimit(1)
+
+            ZStack {
+                Circle()
+                    .fill(isSelected ? Color.white.opacity(0.22) : Palette.accent.opacity(0.10))
+
+                Text(count > 99 ? "99+" : "\(count)")
+                    .font(.custom("Avenir Next Demi Bold", size: count > 99 ? 9 : 10))
+                    .foregroundStyle(isSelected ? Color.white : Palette.accent)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(width: 24, height: 24)
+        }
+    }
+}
+
 struct HistoryScreen: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var videoPlaybackStore: VideoPlaybackStore
@@ -93,15 +119,18 @@ struct HistoryScreen: View {
                                     Button {
                                         selectedPageBinding.wrappedValue = page
                                     } label: {
-                                        Text(page.title(count: entryCount(for: page)))
-                                            .font(.custom("Avenir Next Demi Bold", size: 12))
-                                            .foregroundStyle(selectedPage == page ? Color.white : Palette.ink)
-                                            .padding(.horizontal, 14)
-                                            .padding(.vertical, 10)
-                                            .background(
-                                                Capsule(style: .continuous)
-                                                    .fill(selectedPage == page ? Palette.accent : Color.white.opacity(0.9))
-                                            )
+                                        HistoryCountChipLabel(
+                                            title: page.title,
+                                            count: entryCount(for: page),
+                                            isSelected: selectedPage == page
+                                        )
+                                        .foregroundStyle(selectedPage == page ? Color.white : Palette.ink)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            Capsule(style: .continuous)
+                                                .fill(selectedPage == page ? Palette.accent : Color.white.opacity(0.9))
+                                        )
                                     }
                                     .buttonStyle(.plain)
                                 }
