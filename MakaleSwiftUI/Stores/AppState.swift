@@ -150,6 +150,7 @@ final class AppState: ObservableObject {
     private let openEventSyncService = OpenEventSyncService()
     private var hasLoadedHistory = false
     private var loadedHistoryScopes: Set<String> = []
+    private var loadedHistoryCounts: [String: Int] = [:]
     private var historyPreparationTask: Task<Void, Never>?
 
     init() {
@@ -243,12 +244,18 @@ final class AppState: ObservableObject {
         do {
             let entries = try await self.repository.fetchHistory(
                 email: session.email,
-                kind: kind
+                kind: kind,
+                limit: minimumCount
             )
             let mergedEntries = mergeHistoryEntries(entries, kind: kind, email: session.email)
             self.historyStore.replace(with: mergedEntries, for: kind)
             self.hasLoadedHistory = true
-            self.loadedHistoryScopes.insert(historyScopeKey(for: kind))
+            let scopeKey = historyScopeKey(for: kind)
+            self.loadedHistoryScopes.insert(scopeKey)
+            self.loadedHistoryCounts[scopeKey] = max(
+                minimumCount,
+                max(loadedHistoryCounts[scopeKey] ?? 0, historyEntryCount(for: kind))
+            )
         } catch {
             activeAlert = AppAlert(
                 title: "Something Went Wrong",
@@ -264,6 +271,7 @@ final class AppState: ObservableObject {
         historyStore.clear()
         hasLoadedHistory = true
         loadedHistoryScopes = []
+        loadedHistoryCounts = [:]
     }
 
     func showProfileHistory(kind: HistoryKind) {
@@ -1505,6 +1513,7 @@ final class AppState: ObservableObject {
         isRefreshingHistory = false
         hasLoadedHistory = false
         loadedHistoryScopes = []
+        loadedHistoryCounts = [:]
         clearScopedLibraryFilters()
         preferredHistoryPageRawValue = PreferredHistoryPage.all.rawValue
         historyNavigationToken = UUID()
@@ -1598,7 +1607,15 @@ final class AppState: ObservableObject {
         if !hasLoadedHistory {
             return true
         }
-        return !loadedHistoryScopes.contains(historyScopeKey(for: kind))
+        let scopeKey = historyScopeKey(for: kind)
+        let availableCount = historyEntryCount(for: kind)
+        let loadedCount = loadedHistoryCounts[scopeKey] ?? 0
+
+        if !loadedHistoryScopes.contains(scopeKey) {
+            return true
+        }
+
+        return max(availableCount, loadedCount) < minimumCount
     }
 
     private func historyEntryCount(for kind: HistoryKind?) -> Int {

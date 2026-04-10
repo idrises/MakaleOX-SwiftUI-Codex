@@ -546,10 +546,11 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
         )
     }
 
-    func fetchHistory(email: String, kind: HistoryKind? = nil) async throws -> [HistoryEntry] {
+    func fetchHistory(email: String, kind: HistoryKind? = nil, limit: Int = 50) async throws -> [HistoryEntry] {
+        let historyLimit = max(1, limit)
         let articleRows: [SQLRow]
         if kind == nil || kind == .article {
-            articleRows = try await fetchArticleHistory(email: email)
+            articleRows = try await fetchArticleHistory(email: email, limit: historyLimit)
         } else {
             articleRows = []
         }
@@ -559,9 +560,10 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
             chapterRows = try await gateway.query(
                 """
                 WITH recentChapterHistory AS (
-                    SELECT chapter, book, [date]
+                    SELECT TOP \(historyLimit) chapter, book, [date]
                     FROM usersOpenedChapter
                     WHERE usermail = ?
+                    ORDER BY [date] DESC
                 )
                 SELECT
                     resolved.name AS currentTitle,
@@ -594,9 +596,10 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
             videoRows = try await gateway.query(
                 """
                 WITH recentVideoHistory AS (
-                    SELECT bookJournal, title, link, openedDate
+                    SELECT TOP \(historyLimit) bookJournal, title, link, openedDate
                     FROM videoOpened
                     WHERE usermail = ?
+                    ORDER BY openedDate DESC
                 )
                 SELECT
                     resolved.title AS currentTitle,
@@ -630,9 +633,10 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
             videoSetRows = try await gateway.query(
                 """
                 WITH recentVideoSetHistory AS (
-                    SELECT title, setName, author, openedDate
+                    SELECT TOP \(historyLimit) title, setName, author, openedDate
                     FROM videoSetOpened
                     WHERE usermail = ?
+                    ORDER BY openedDate DESC
                 )
                 SELECT
                     resolved.title AS currentTitle,
@@ -816,26 +820,27 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
         )
     }
 
-    private func fetchArticleHistory(email: String) async throws -> [SQLRow] {
+    private func fetchArticleHistory(email: String, limit: Int) async throws -> [SQLRow] {
         do {
             return try await gateway.query(
-                articleHistoryQueryWithStoredReference(),
+                articleHistoryQueryWithStoredReference(limit: limit),
                 parameters: [email],
                 timeout: 90
             )
         } catch {
             return try await gateway.query(
-                legacyArticleHistoryQuery(),
+                legacyArticleHistoryQuery(limit: limit),
                 parameters: [email],
                 timeout: 90
             )
         }
     }
 
-    private func articleHistoryQueryWithStoredReference() -> String {
+    private func articleHistoryQueryWithStoredReference(limit: Int) -> String {
         """
         WITH recentArticleHistory AS (
             SELECT
+                TOP \(max(1, limit))
                 Article,
                 Journal,
                 year,
@@ -847,6 +852,7 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
                 COALESCE(pdfLink, '') AS historyPdfLink
             FROM usersOpenedArticle
             WHERE usermail = ?
+            ORDER BY [date] DESC
         ),
         directHistory AS (
             SELECT
@@ -924,12 +930,13 @@ func fetchDashboard(subject: String) async throws -> DashboardSnapshot {
         """
     }
 
-    private func legacyArticleHistoryQuery() -> String {
+    private func legacyArticleHistoryQuery(limit: Int) -> String {
         """
         WITH recentArticleHistory AS (
-            SELECT Article, Journal, year, volume, [date]
+            SELECT TOP \(max(1, limit)) Article, Journal, year, volume, [date]
             FROM usersOpenedArticle
             WHERE usermail = ?
+            ORDER BY [date] DESC
         )
         SELECT
             resolved.MAKALE AS currentTitle,
