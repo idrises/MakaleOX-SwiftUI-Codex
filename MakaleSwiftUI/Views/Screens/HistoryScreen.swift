@@ -19,6 +19,10 @@ private enum HistoryPage: String, CaseIterable, Identifiable {
         }
     }
 
+    func title(count: Int) -> String {
+        "\(title) \(count)"
+    }
+
     var historyKind: HistoryKind? {
         switch self {
         case .all: return nil
@@ -85,7 +89,7 @@ struct HistoryScreen: View {
 
                         Picker("History Category", selection: selectedPageBinding) {
                             ForEach(HistoryPage.allCases) { page in
-                                Text(page.title).tag(page)
+                                Text(page.title(count: entryCount(for: page))).tag(page)
                             }
                         }
                         .pickerStyle(.segmented)
@@ -238,18 +242,7 @@ struct HistoryScreen: View {
     }
 
     private var pageEntries: [HistoryEntry] {
-        switch selectedPage {
-        case .all:
-            return appState.historyStore.entries
-        case .articles:
-            return appState.historyStore.entries.filter { $0.kind == .article }
-        case .books:
-            return appState.historyStore.entries.filter { $0.kind == .chapter }
-        case .videos:
-            return appState.historyStore.entries.filter { $0.kind == .video }
-        case .videoSets:
-            return appState.historyStore.entries.filter { $0.kind == .videoSet }
-        }
+        entries(for: selectedPage)
     }
 
     private var filteredEntries: [HistoryEntry] {
@@ -293,6 +286,25 @@ struct HistoryScreen: View {
 
     private var hasActiveSearch: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func entries(for page: HistoryPage) -> [HistoryEntry] {
+        switch page {
+        case .all:
+            return appState.historyStore.entries
+        case .articles:
+            return appState.historyStore.entries.filter { $0.kind == .article }
+        case .books:
+            return appState.historyStore.entries.filter { $0.kind == .chapter }
+        case .videos:
+            return appState.historyStore.entries.filter { $0.kind == .video }
+        case .videoSets:
+            return appState.historyStore.entries.filter { $0.kind == .videoSet }
+        }
+    }
+
+    private func entryCount(for page: HistoryPage) -> Int {
+        entries(for: page).count
     }
 
     private func applyPreferredPageSelection() {

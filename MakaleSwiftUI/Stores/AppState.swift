@@ -151,7 +151,9 @@ final class AppState: ObservableObject {
     private var hasLoadedHistory = false
     private var loadedHistoryScopes: Set<String> = []
     private var loadedHistoryCounts: [String: Int] = [:]
+    private var lastHistoryRefreshDates: [String: Date] = [:]
     private var historyPreparationTask: Task<Void, Never>?
+    private let historyAutoRefreshInterval: TimeInterval = 120
 
     init() {
         self.session = sessionStore.session
@@ -235,7 +237,7 @@ final class AppState: ObservableObject {
 
     func refreshHistory(kind: HistoryKind? = nil, minimumCount: Int = 50, force: Bool = true) async {
         guard let session else { return }
-        guard force || shouldPrepareHistory(kind: kind, minimumCount: minimumCount) else { return }
+        guard force || shouldPrepareHistory(kind: kind, minimumCount: minimumCount) || shouldAutoRefreshHistory(kind: kind) else { return }
         guard !isRefreshingHistory else { return }
 
         isRefreshingHistory = true
@@ -256,6 +258,7 @@ final class AppState: ObservableObject {
                 minimumCount,
                 max(loadedHistoryCounts[scopeKey] ?? 0, historyEntryCount(for: kind))
             )
+            self.lastHistoryRefreshDates[scopeKey] = Date()
         } catch {
             activeAlert = AppAlert(
                 title: "Something Went Wrong",
@@ -272,6 +275,7 @@ final class AppState: ObservableObject {
         hasLoadedHistory = true
         loadedHistoryScopes = []
         loadedHistoryCounts = [:]
+        lastHistoryRefreshDates = [:]
     }
 
     func showProfileHistory(kind: HistoryKind) {
@@ -1625,7 +1629,13 @@ final class AppState: ObservableObject {
 
     private func historyMessage(for kind: HistoryKind?, minimumCount: Int) -> String {
         let scopeTitle = kind?.title ?? "History"
-        return "\(scopeTitle) is being prepared in the background. The first \(minimumCount) records will appear first, then the rest will stay available as you scroll."
+        return "\(scopeTitle) is refreshing in the background. The first \(minimumCount) records appear first, then more arrive as you scroll."
+    }
+
+    private func shouldAutoRefreshHistory(kind: HistoryKind?) -> Bool {
+        let scopeKey = historyScopeKey(for: kind)
+        guard let lastRefreshDate = lastHistoryRefreshDates[scopeKey] else { return true }
+        return Date().timeIntervalSince(lastRefreshDate) >= historyAutoRefreshInterval
     }
 
     private func historyScopeKey(for kind: HistoryKind?) -> String {
