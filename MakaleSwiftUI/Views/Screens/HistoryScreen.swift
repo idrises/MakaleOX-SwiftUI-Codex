@@ -87,14 +87,27 @@ struct HistoryScreen: View {
                             }
                         }
 
-                        Picker("History Category", selection: selectedPageBinding) {
-                            ForEach(HistoryPage.allCases) { page in
-                                Text(page.title(count: entryCount(for: page))).tag(page)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(HistoryPage.allCases) { page in
+                                    Button {
+                                        selectedPageBinding.wrappedValue = page
+                                    } label: {
+                                        Text(page.title(count: entryCount(for: page)))
+                                            .font(.custom("Avenir Next Demi Bold", size: 12))
+                                            .foregroundStyle(selectedPage == page ? Color.white : Palette.ink)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 10)
+                                            .background(
+                                                Capsule(style: .continuous)
+                                                    .fill(selectedPage == page ? Palette.accent : Color.white.opacity(0.9))
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
+                            .padding(.vertical, 2)
                         }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 440)
-                        .controlSize(.small)
 
                         SearchInputField(
                             placeholder: "Filter title, source, author…",
