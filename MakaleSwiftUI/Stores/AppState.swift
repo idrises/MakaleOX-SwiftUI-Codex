@@ -1399,7 +1399,11 @@ final class AppState: ObservableObject {
         force: Bool = false
     ) {
         guard session != nil else { return }
-        guard force || shouldPrepareHistory(kind: kind, minimumCount: minimumCount) else { return }
+        guard
+            force
+                || shouldPrepareHistory(kind: kind, minimumCount: minimumCount)
+                || shouldAutoRefreshHistory(kind: kind)
+        else { return }
         guard !isRefreshingHistory else { return }
 
         historyPreparationTask?.cancel()
