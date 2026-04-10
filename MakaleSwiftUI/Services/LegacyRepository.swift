@@ -529,6 +529,7 @@ final class LegacyRepository {
                     resolved.book AS currentBook,
                     resolved.editors AS currentEditors,
                     recentChapterHistory.[date] AS openedAt,
+                    CONVERT(varchar(33), recentChapterHistory.[date], 121) AS openedAtText,
                     resolved.isbn AS isbn,
                     resolved.link AS pdfLink,
                     resolved.year AS chapterYear
@@ -565,7 +566,8 @@ final class LegacyRepository {
                     resolved.editor AS currentEditor,
                     resolved.link2 AS remoteLink,
                     resolved.imageLink AS imageLink,
-                    recentVideoHistory.openedDate AS openedAt
+                    recentVideoHistory.openedDate AS openedAt,
+                    CONVERT(varchar(33), recentVideoHistory.openedDate, 121) AS openedAtText
                 FROM recentVideoHistory
                 CROSS APPLY (
                     SELECT TOP 1 title, bookJournal, author, editor, link2, imageLink
@@ -598,6 +600,7 @@ final class LegacyRepository {
                     resolved.setName AS currentSetName,
                     resolved.author AS currentAuthor,
                     recentVideoSetHistory.openedDate AS openedAt,
+                    CONVERT(varchar(33), recentVideoSetHistory.openedDate, 121) AS openedAtText,
                     resolved.imageLink AS imageLink,
                     resolved.link AS remoteLink
                 FROM recentVideoSetHistory
@@ -648,7 +651,7 @@ final class LegacyRepository {
                     ?? LegacyConfig.coverCandidates(for: journal).first?.absoluteString
                     ?? "",
                 reference: .article(journal: journal, folder: folder, pdfLink: pdfLink),
-                openedAt: row.date("openedAt", "openedAtText") ?? .distantPast
+                openedAt: row.date("openedAtText", "openedAt") ?? .distantPast
             )
         }
 
@@ -668,7 +671,7 @@ final class LegacyRepository {
                 urlString: "",
                 coverURLString: LegacyConfig.bookCoverCandidates(isbn: isbn).first?.absoluteString ?? "",
                 reference: .chapter(isbn: isbn, pdfLink: pdfLink),
-                openedAt: row.date("openedAt", "openedAtText") ?? .distantPast
+                openedAt: row.date("openedAtText", "openedAt") ?? .distantPast
             )
         }
 
@@ -688,7 +691,7 @@ final class LegacyRepository {
                 urlString: remoteURL.absoluteString,
                 coverURLString: LegacyConfig.videoCoverCandidates(name: row.string("imageLink")).first?.absoluteString ?? "",
                 reference: .video(bookJournal: bookJournal, link: remoteLink),
-                openedAt: row.date("openedAt", "openedAtText") ?? .distantPast
+                openedAt: row.date("openedAtText", "openedAt") ?? .distantPast
             )
         }
 
@@ -709,7 +712,7 @@ final class LegacyRepository {
                 urlString: remoteURL.absoluteString,
                 coverURLString: LegacyConfig.videoCoverCandidates(name: imageName).first?.absoluteString ?? "",
                 reference: .videoSet(setName: setName, link: remoteLink),
-                openedAt: row.date("openedAt", "openedAtText") ?? .distantPast
+                openedAt: row.date("openedAtText", "openedAt") ?? .distantPast
             )
         }
 
@@ -812,6 +815,7 @@ final class LegacyRepository {
                 recentArticleHistory.historyAuthor AS currentAuthor,
                 recentArticleHistory.Journal AS currentJournal,
                 recentArticleHistory.[date] AS openedAt,
+                CONVERT(varchar(33), recentArticleHistory.[date], 121) AS openedAtText,
                 recentArticleHistory.historyIssueTitle AS issueTitle,
                 recentArticleHistory.year AS currentYear,
                 recentArticleHistory.volume AS currentVolume,
@@ -827,6 +831,7 @@ final class LegacyRepository {
                 COALESCE(NULLIF(resolved.YAZAR, ''), recentArticleHistory.historyAuthor) AS currentAuthor,
                 COALESCE(NULLIF(resolved.dergi, ''), recentArticleHistory.Journal) AS currentJournal,
                 recentArticleHistory.[date] AS openedAt,
+                CONVERT(varchar(33), recentArticleHistory.[date], 121) AS openedAtText,
                 COALESCE(NULLIF(resolved.DONEM, ''), recentArticleHistory.historyIssueTitle) AS issueTitle,
                 COALESCE(NULLIF(resolved.YIL, ''), recentArticleHistory.year) AS currentYear,
                 COALESCE(NULLIF(resolved.VOLUME, ''), recentArticleHistory.volume) AS currentVolume,
@@ -865,6 +870,7 @@ final class LegacyRepository {
             combined.currentAuthor,
             combined.currentJournal,
             combined.openedAt,
+            combined.openedAtText,
             combined.issueTitle,
             combined.currentYear,
             combined.currentVolume,
@@ -891,6 +897,7 @@ final class LegacyRepository {
             resolved.YAZAR AS currentAuthor,
             resolved.dergi AS currentJournal,
             recentArticleHistory.[date] AS openedAt,
+            CONVERT(varchar(33), recentArticleHistory.[date], 121) AS openedAtText,
             resolved.DONEM AS issueTitle,
             resolved.YIL AS currentYear,
             resolved.VOLUME AS currentVolume,
