@@ -109,6 +109,10 @@ private enum PhoneHistoryPage: String, CaseIterable, Identifiable {
         }
     }
 
+    func title(count: Int) -> String {
+        "\(title) \(count)"
+    }
+
     var historyKind: HistoryKind? {
         switch self {
         case .all: return nil
@@ -2557,6 +2561,7 @@ private struct PhoneHistoryExperienceScreen: View {
     @State private var selectedPage: PhoneHistoryPage = .all
     @State private var searchText = ""
     @State private var visibleItemCount = 50
+    @State private var requestedFetchCount = 50
 
     private let pageSize = 50
 
@@ -2568,7 +2573,11 @@ private struct PhoneHistoryExperienceScreen: View {
                 subtitle: "Quickly jump back into the PDFs and videos you already opened."
             ) {
                 Button {
-                    Task { await appState.refreshHistory(kind: selectedPage.historyKind) }
+                    appState.prepareHistoryInBackgroundIfNeeded(
+                        kind: selectedPage.historyKind,
+                        minimumCount: requestedFetchCount,
+                        force: true
+                    )
                 } label: {
                     HStack(spacing: 6) {
                         if appState.isRefreshingHistory {
@@ -2592,7 +2601,7 @@ private struct PhoneHistoryExperienceScreen: View {
                         Button {
                             selectedPage = page
                         } label: {
-                            Text(page.title)
+                            Text(page.title(count: entryCount(for: page)))
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundStyle(selectedPage == page ? Color.white : Palette.ink)
                                 .padding(.horizontal, 14)
@@ -2663,14 +2672,7 @@ private struct PhoneHistoryExperienceScreen: View {
     }
 
     private var filteredEntries: [HistoryEntry] {
-        let baseEntries: [HistoryEntry]
-        switch selectedPage {
-        case .all: baseEntries = appState.historyStore.entries
-        case .articles: baseEntries = appState.historyStore.entries.filter { $0.kind == .article }
-        case .books: baseEntries = appState.historyStore.entries.filter { $0.kind == .chapter }
-        case .videos: baseEntries = appState.historyStore.entries.filter { $0.kind == .video }
-        case .videoSets: baseEntries = appState.historyStore.entries.filter { $0.kind == .videoSet }
-        }
+        let baseEntries = entries(for: selectedPage)
 
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return baseEntries }
@@ -2687,6 +2689,20 @@ private struct PhoneHistoryExperienceScreen: View {
 
     private var hasSearch: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func entries(for page: PhoneHistoryPage) -> [HistoryEntry] {
+        switch page {
+        case .all: return appState.historyStore.entries
+        case .articles: return appState.historyStore.entries.filter { $0.kind == .article }
+        case .books: return appState.historyStore.entries.filter { $0.kind == .chapter }
+        case .videos: return appState.historyStore.entries.filter { $0.kind == .video }
+        case .videoSets: return appState.historyStore.entries.filter { $0.kind == .videoSet }
+        }
+    }
+
+    private func entryCount(for page: PhoneHistoryPage) -> Int {
+        entries(for: page).count
     }
 
     private func coverURLs(for entry: HistoryEntry) -> [URL] {
@@ -2707,17 +2723,30 @@ private struct PhoneHistoryExperienceScreen: View {
 
     private func resetPaginationAndPrepareHistory() {
         visibleItemCount = pageSize
+        requestedFetchCount = pageSize
         appState.prepareHistoryInBackgroundIfNeeded(
             kind: selectedPage.historyKind,
-            minimumCount: pageSize,
+            minimumCount: requestedFetchCount,
             force: false
         )
     }
 
     private func loadMoreIfNeeded(currentEntry entry: HistoryEntry) {
         guard visibleEntries.last?.id == entry.id else { return }
-        guard visibleItemCount < filteredEntries.count else { return }
-        visibleItemCount = min(visibleItemCount + pageSize, filteredEntries.count)
+
+        if visibleItemCount < filteredEntries.count {
+            visibleItemCount = min(visibleItemCount + pageSize, filteredEntries.count)
+        }
+
+        let nextFetchCount = max(visibleItemCount + pageSize, requestedFetchCount)
+        guard nextFetchCount > requestedFetchCount else { return }
+
+        requestedFetchCount = nextFetchCount
+        appState.prepareHistoryInBackgroundIfNeeded(
+            kind: selectedPage.historyKind,
+            minimumCount: nextFetchCount,
+            force: false
+        )
     }
 }
 
