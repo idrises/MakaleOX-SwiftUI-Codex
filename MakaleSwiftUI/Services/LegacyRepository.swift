@@ -805,41 +805,77 @@ final class LegacyRepository {
                 COALESCE(pdfLink, '') AS historyPdfLink
             FROM usersOpenedArticle
             WHERE usermail = ?
+        ),
+        directHistory AS (
+            SELECT
+                recentArticleHistory.Article AS currentTitle,
+                recentArticleHistory.historyAuthor AS currentAuthor,
+                recentArticleHistory.Journal AS currentJournal,
+                recentArticleHistory.[date] AS openedAt,
+                recentArticleHistory.historyIssueTitle AS issueTitle,
+                recentArticleHistory.year AS currentYear,
+                recentArticleHistory.volume AS currentVolume,
+                recentArticleHistory.historyFolder AS folder,
+                recentArticleHistory.historyPdfLink AS pdfLink
+            FROM recentArticleHistory
+            WHERE recentArticleHistory.historyFolder <> ''
+                AND recentArticleHistory.historyPdfLink <> ''
+        ),
+        resolvedHistory AS (
+            SELECT
+                COALESCE(NULLIF(resolved.MAKALE, ''), recentArticleHistory.Article) AS currentTitle,
+                COALESCE(NULLIF(resolved.YAZAR, ''), recentArticleHistory.historyAuthor) AS currentAuthor,
+                COALESCE(NULLIF(resolved.dergi, ''), recentArticleHistory.Journal) AS currentJournal,
+                recentArticleHistory.[date] AS openedAt,
+                COALESCE(NULLIF(resolved.DONEM, ''), recentArticleHistory.historyIssueTitle) AS issueTitle,
+                COALESCE(NULLIF(resolved.YIL, ''), recentArticleHistory.year) AS currentYear,
+                COALESCE(NULLIF(resolved.VOLUME, ''), recentArticleHistory.volume) AS currentVolume,
+                COALESCE(NULLIF(resolved.KLASOR, ''), recentArticleHistory.historyFolder) AS folder,
+                COALESCE(NULLIF(resolved.LINK, ''), recentArticleHistory.historyPdfLink) AS pdfLink
+            FROM recentArticleHistory
+            OUTER APPLY (
+                SELECT TOP 1 MAKALE, YAZAR, dergi, DONEM, YIL, VOLUME, KLASOR, LINK
+                FROM MAKALE
+                WHERE MAKALE = recentArticleHistory.Article
+                    AND dergi = recentArticleHistory.Journal
+                ORDER BY
+                    CASE
+                        WHEN recentArticleHistory.year <> ''
+                            AND YIL = recentArticleHistory.year
+                        THEN 0
+                        ELSE 1
+                    END,
+                    CASE
+                        WHEN recentArticleHistory.volume <> ''
+                            AND VOLUME = recentArticleHistory.volume
+                        THEN 0
+                        ELSE 1
+                    END,
+                    createDate DESC,
+                    YIL DESC,
+                    VOLUME DESC
+            ) AS resolved
+            WHERE (recentArticleHistory.historyFolder = ''
+                OR recentArticleHistory.historyPdfLink = '')
+                AND recentArticleHistory.Article <> ''
+                AND recentArticleHistory.Journal <> ''
         )
         SELECT
-            COALESCE(NULLIF(resolved.MAKALE, ''), recentArticleHistory.Article) AS currentTitle,
-            COALESCE(NULLIF(resolved.YAZAR, ''), recentArticleHistory.historyAuthor) AS currentAuthor,
-            COALESCE(NULLIF(resolved.dergi, ''), recentArticleHistory.Journal) AS currentJournal,
-            recentArticleHistory.[date] AS openedAt,
-            COALESCE(NULLIF(resolved.DONEM, ''), recentArticleHistory.historyIssueTitle) AS issueTitle,
-            COALESCE(NULLIF(resolved.YIL, ''), recentArticleHistory.year) AS currentYear,
-            COALESCE(NULLIF(resolved.VOLUME, ''), recentArticleHistory.volume) AS currentVolume,
-            COALESCE(NULLIF(resolved.KLASOR, ''), recentArticleHistory.historyFolder) AS folder,
-            COALESCE(NULLIF(resolved.LINK, ''), recentArticleHistory.historyPdfLink) AS pdfLink
-        FROM recentArticleHistory
-        OUTER APPLY (
-            SELECT TOP 1 MAKALE, YAZAR, dergi, DONEM, YIL, VOLUME, KLASOR, LINK
-            FROM MAKALE
-            WHERE MAKALE = recentArticleHistory.Article
-                AND dergi = recentArticleHistory.Journal
-            ORDER BY
-                CASE
-                    WHEN recentArticleHistory.year <> ''
-                        AND YIL = recentArticleHistory.year
-                    THEN 0
-                    ELSE 1
-                END,
-                CASE
-                    WHEN recentArticleHistory.volume <> ''
-                        AND VOLUME = recentArticleHistory.volume
-                    THEN 0
-                    ELSE 1
-                END,
-                createDate DESC,
-                YIL DESC,
-                VOLUME DESC
-        ) AS resolved
-        ORDER BY recentArticleHistory.[date] DESC
+            combined.currentTitle,
+            combined.currentAuthor,
+            combined.currentJournal,
+            combined.openedAt,
+            combined.issueTitle,
+            combined.currentYear,
+            combined.currentVolume,
+            combined.folder,
+            combined.pdfLink
+        FROM (
+            SELECT * FROM directHistory
+            UNION ALL
+            SELECT * FROM resolvedHistory
+        ) AS combined
+        ORDER BY combined.openedAt DESC
         """
     }
 
